@@ -1,6 +1,6 @@
 # Hospital Patient System (CLI)
 
-A terminal-based hospital information system written in Python and SQLite for managing outpatient visits, emergency intake, nursing triage, doctor consultations, and cashier billing. Built as a college project for Batangas State University (BatStateU - TNEU).
+A terminal-based hospital information system written in Python and SQLite for managing outpatient visits, emergency intake, nursing triage, doctor consultations, and cashier billing. Built as a college project for Westmead International School.
 
 The application features an interactive terminal interface using **Rich** (tables, colored status badges, dashboard panels) and **Questionary** (arrow-key navigation), with data validation handled by **Pydantic v2** and scriptable subcommands powered by **Typer**.
 
