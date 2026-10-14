@@ -1,4 +1,4 @@
-# Hospital Patient Management System (CLI) — Philippine Edition
+# Hospital Patient Management System (CLI)
 ## System Documentation & Presentation Guide
 
 This guide explains how the system works, how the source code is organized, and how to run a live demonstration for your project presentation.
