@@ -33,9 +33,9 @@ from config import (
 )
 
 
-# ==========================================
-# Simple Validation Functions
-# ==========================================
+
+
+
 
 def validate_non_empty(
     text: str, field_name: str = "Field", min_length: int = 1, max_length: int = 255
@@ -191,9 +191,9 @@ def validate_menu_choice(choice_str: str, min_choice: int, max_choice: int) -> T
     return True, val, ""
 
 
-# ==========================================
-# Validation Error Formatter
-# ==========================================
+
+
+
 
 def format_pydantic_error(exc: ValidationError) -> str:
     """Turn validation error messages into clean, readable bullet points."""
@@ -201,16 +201,16 @@ def format_pydantic_error(exc: ValidationError) -> str:
     for err in exc.errors():
         field = " -> ".join(str(loc) for loc in err["loc"])
         msg = err["msg"]
-        # Clean up error text
+
         if msg.startswith("Value error, "):
             msg = msg[len("Value error, "):]
         lines.append(f"• {field.title()}: {msg}")
     return "\n".join(lines)
 
 
-# ==========================================
-# Validation Models
-# ==========================================
+
+
+
 
 class PatientCreateModel(BaseModel):
     """Validation schema for registering a new patient."""

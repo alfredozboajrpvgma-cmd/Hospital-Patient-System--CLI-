@@ -22,7 +22,7 @@ except ImportError:
     from utils.plain_display import Console, Table, Panel, Text, box, Columns, Padding, Constrain
     RICH_AVAILABLE = False
 
-# Make sure Windows terminal displays the Philippine Peso symbol (₱) correctly
+
 if hasattr(sys.stdout, "reconfigure"):
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -30,7 +30,7 @@ if hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
-# Rich Console used for all colored terminal printing
+
 _color_mode = os.environ.get("HOSPITAL_COLOR", "auto").lower()
 if _color_mode == "always" and os.environ.get("TERM", "dumb") in ("dumb", "unknown"):
     os.environ["TERM"] = "xterm"
@@ -41,7 +41,7 @@ console = Console(
     color_system="standard" if _color_mode == "always" else "auto",
 )
 
-# Cap content width so large terminals stay readable and centered
+
 CONTENT_MAX = 100
 
 
@@ -118,7 +118,7 @@ def _style_cell_content(col_header: str, val_str: str) -> str:
     header_lower = col_header.lower()
     val_lower = val_str.lower()
 
-    # Status column color badges
+
     if "status" in header_lower:
         if val_lower in ("active", "completed", "paid", "checked-in"):
             return f"[bold green]{val_str}[/bold green]"
@@ -131,7 +131,7 @@ def _style_cell_content(col_header: str, val_str: str) -> str:
         elif val_lower in ("triage", "consultation"):
             return f"[bold cyan]{val_str}[/bold cyan]"
 
-    # Triage urgency color badges
+
     if "category" in header_lower or "urgency" in header_lower:
         if "emergency" in val_lower:
             return f"[bold red]🚨 {val_str}[/bold red]"
@@ -140,7 +140,7 @@ def _style_cell_content(col_header: str, val_str: str) -> str:
         elif "non-urgent" in val_lower:
             return f"[bold green]ℹ️ {val_str}[/bold green]"
 
-    # Currency formatting highlight
+
     if "amount" in header_lower or "total" in header_lower or "balance" in header_lower or "paid" in header_lower:
         if "₱" in val_str or "php" in val_lower:
             return f"[bold cyan]{val_str}[/bold cyan]"
@@ -157,8 +157,8 @@ def print_table(
 ) -> None:
     """Print records in a clean table with borders and colored statuses."""
     width = _ui_width()
-    # Phone screens cannot fit all registry columns horizontally. Keep borders
-    # and colors, but show each record in a two-column field/value table.
+
+
     if RICH_AVAILABLE and rows and width < max(60, len(headers) * 12):
         for number, row in enumerate(rows, 1):
             compact = Table(
@@ -212,7 +212,7 @@ def print_table(
         elif align == "center":
             justify = "center"
 
-        # Keep ID and date columns compact, let descriptions expand
+
         table.add_column(header, justify=justify, no_wrap=(idx == 0 or "date" in header.lower()))
 
     for row in rows:
@@ -307,7 +307,7 @@ def render_dashboard(
         expand=True,
     ), width=width)
 
-    # Card 1: Patient Registry
+
     p_text = Text()
     p_text.append(f"Active Patients:   ", style="bold")
     p_text.append(f"{active_patients}\n", style="bold green")
@@ -317,7 +317,7 @@ def render_dashboard(
     p_text.append("Operational", style="green")
     card_patients = Panel(p_text, title="[bold cyan]👥 Patient Care[/bold cyan]", border_style="cyan", box=box.ROUNDED)
 
-    # Card 2: Operations & Queue Today
+
     q_text = Text()
     q_text.append(f"Appts Scheduled Today: ", style="bold")
     q_text.append(f"{appointments_today}\n", style="bold yellow" if appointments_today > 0 else "dim")
@@ -327,7 +327,7 @@ def render_dashboard(
     q_text.append(f"{completed_consultations}", style="cyan")
     card_ops = Panel(q_text, title="[bold blue]🏥 Clinical Ops[/bold blue]", border_style="blue", box=box.ROUNDED)
 
-    # Card 3: Financial Summary
+
     f_text = Text()
     f_text.append(f"Total Billed:    ", style="dim")
     f_text.append(f"₱{total_billed:,.2f}\n", style="bold white")
@@ -340,7 +340,7 @@ def render_dashboard(
     card_fin = Panel(f_text, title="[bold green]💰 Financial Overview[/bold green]", border_style="green", box=box.ROUNDED)
 
     columns = Columns([card_patients, card_ops, card_fin], equal=True, expand=True)
-    # Cap and center only on wide terminals; avoid Columns(width=...) which crashes in Rich
+
     if (console.width or CONTENT_MAX) > CONTENT_MAX:
         _print_centered(Constrain(columns, width=width), width=width)
     else:

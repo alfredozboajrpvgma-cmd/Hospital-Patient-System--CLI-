@@ -7,26 +7,26 @@ import sys
 import os
 from pathlib import Path
 
-# Main project folder (supports both normal python run and compiled .exe)
+
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys.executable).resolve().parent
 else:
     BASE_DIR = Path(__file__).resolve().parent
 
-# Where the SQLite database file is stored
+
 DATA_DIR = Path(os.environ.get("HOSPITAL_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
 DATABASE_PATH = DATA_DIR / "hospital.db"
 
-# Currency settings for the Philippines
+
 CURRENCY_SYMBOL = "₱"
 CURRENCY_CODE = "PHP"
 
-# Standard date and time formats
+
 DATE_FORMAT = "%Y-%m-%d"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M"
 TIME_FORMAT = "%H:%M"
 
-# Hospital departments available for appointments and visits
+
 DEPARTMENTS = [
     "Outpatient Department (OPD)",
     "Emergency Room (ER)",
@@ -40,15 +40,15 @@ DEPARTMENTS = [
     "Laboratory & Diagnostics"
 ]
 
-# Allowed patient inputs
+
 VALID_SEX_OPTIONS = ["Male", "Female", "Other"]
 VALID_PATIENT_STATUS = ["Active", "Archived"]
 PATIENT_TYPES = ["Outpatient", "Inpatient", "Emergency"]
 
-# Hospital staff roles for Role-Based Access Control (RBAC)
+
 STAFF_ROLES = ["Administrator", "Doctor", "Nurse", "Receptionist", "Billing"]
 
-# Departments open for scheduled outpatient appointments (ER is walk-in emergency only)
+
 SCHEDULED_DEPARTMENTS = [
     "Outpatient Department (OPD)",
     "Internal Medicine",
@@ -61,10 +61,10 @@ SCHEDULED_DEPARTMENTS = [
     "Laboratory & Diagnostics"
 ]
 
-# Allowed appointment statuses
+
 VALID_APPOINTMENT_STATUS = ["Scheduled", "Checked-In", "Completed", "Cancelled", "Rescheduled", "No-Show"]
 
-# Daily Queue Status Transitions
+
 QUEUE_STATUSES = ["Waiting", "Triage", "Consultation", "Billing", "Completed", "Cancelled"]
 VALID_QUEUE_TRANSITIONS = {
     "Waiting": ["Triage", "Consultation", "Cancelled"],
@@ -75,10 +75,10 @@ VALID_QUEUE_TRANSITIONS = {
     "Cancelled": []
 }
 
-# Nursing Triage Urgency Categories
+
 TRIAGE_CATEGORIES = ["Emergency", "Urgent", "Non-Urgent"]
 
-# Normal ranges and warning limits for vital signs (temperature, blood pressure, pulse, SpO2)
+
 VITAL_LIMITS = {
     "temp_min": 30.0,
     "temp_max": 45.0,
@@ -107,7 +107,7 @@ VITAL_LIMITS = {
     "spo2_severe_hypoxia": 88
 }
 
-# Philippine discounts (Senior Citizen 20%, PWD 20%, PhilHealth, Charity)
+
 DISCOUNT_TYPES = [
     "None",
     "Senior Citizen (20%)",
@@ -116,7 +116,7 @@ DISCOUNT_TYPES = [
     "Charity / Social Service"
 ]
 
-# Allowed billing statuses and common Philippine payment options
+
 VALID_BILL_STATUS = ["Unpaid", "Partially Paid", "Paid", "Cancelled"]
 VALID_PAYMENT_METHODS = [
     "Cash",

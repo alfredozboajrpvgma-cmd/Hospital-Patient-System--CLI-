@@ -48,7 +48,7 @@ def evaluate_vital_signs(
     alerts = []
     category = "Non-Urgent"
 
-    # 1. Oxygen Saturation (SpO2)
+
     if spo2 < VITAL_LIMITS["spo2_severe_hypoxia"]:
         alerts.append(f"CRITICAL HYPOXIA: SpO2 {spo2}% (Threshold < {VITAL_LIMITS['spo2_severe_hypoxia']}%)")
         category = "Emergency"
@@ -57,7 +57,7 @@ def evaluate_vital_signs(
         if category != "Emergency":
             category = "Urgent"
 
-    # 2. Blood Pressure
+
     if bp_sys >= VITAL_LIMITS["bp_sys_crisis"] or bp_dia >= VITAL_LIMITS["bp_dia_crisis"]:
         alerts.append(f"HYPERTENSIVE CRISIS RANGE: BP {bp_sys}/{bp_dia} mmHg")
         category = "Emergency"
@@ -66,7 +66,7 @@ def evaluate_vital_signs(
         if category != "Emergency":
             category = "Urgent"
 
-    # 3. Heart / Pulse Rate
+
     if pulse > VITAL_LIMITS["pulse_tachy"]:
         alerts.append(f"TACHYCARDIA ALERT: Heart Rate {pulse} bpm")
         if category != "Emergency":
@@ -76,7 +76,7 @@ def evaluate_vital_signs(
         if category != "Emergency":
             category = "Urgent"
 
-    # 4. Temperature
+
     if temperature >= VITAL_LIMITS["temp_high_fever"]:
         alerts.append(f"HIGH FEVER ALERT: Temp {temperature:.1f}°C")
         if category != "Emergency":
@@ -88,7 +88,7 @@ def evaluate_vital_signs(
         if category != "Emergency":
             category = "Urgent"
 
-    # 5. Respiratory Rate
+
     if resp > VITAL_LIMITS["resp_tachy"]:
         alerts.append(f"TACHYPNEA: Respiratory Rate {resp} breaths/min")
         if category != "Emergency":
@@ -97,7 +97,7 @@ def evaluate_vital_signs(
         alerts.append(f"BRADYPNEA / RESPIRATORY DEPRESSION: {resp} breaths/min")
         category = "Emergency"
 
-    # 6. Pain Score
+
     if pain >= 8:
         alerts.append(f"SEVERE ACUTE PAIN: Score {pain}/10")
         if category != "Emergency":
@@ -161,7 +161,7 @@ def record_triage(
     ))
     conn.commit()
 
-    # Log audit event
+
     session = get_current_session()
     u_id = session.user_id if session else "NURSE"
     u_name = session.username if session else nurse_user
@@ -207,9 +207,9 @@ def get_triage_by_id(conn: sqlite3.Connection, triage_id: str) -> Optional[sqlit
     return cursor.fetchone()
 
 
-# ==========================================
-# CLI Submenus and Handlers
-# ==========================================
+
+
+
 
 def handle_record_triage(
     conn: sqlite3.Connection,
@@ -237,7 +237,7 @@ def handle_record_triage(
     print_info(f"Assessing Nurse:   {nurse_name}")
 
     try:
-        # 1. Chief Complaint
+
         while True:
             complaint = input("\nStated Chief Complaint (e.g., severe headache, chest tightness): ").strip()
             if not complaint:
@@ -245,16 +245,16 @@ def handle_record_triage(
                 continue
             break
 
-        # 2. Allergies (Crucial Patient Safety Guardrail)
+
         print("\nAllergy Screening:")
         print("  Document known drug, food, or latex allergies. Type 'NKDA' if none known.")
         allergies_in = input("Known Allergies [NKDA]: ").strip()
         allergies = allergies_in if allergies_in else "No Known Drug Allergies (NKDA)"
 
-        # 3. Vital Signs Entry with physiological range bounds
+
         print("\nEnter Vital Signs:")
 
-        # Temperature
+
         while True:
             t_str = input("  Temperature (°C, e.g. 36.8): ").strip()
             try:
@@ -266,7 +266,7 @@ def handle_record_triage(
             except ValueError:
                 print_error("Please enter a valid numeric temperature.")
 
-        # Blood Pressure
+
         while True:
             bp_sys_str = input("  Systolic BP (mmHg, e.g. 120): ").strip()
             try:
@@ -289,7 +289,7 @@ def handle_record_triage(
             except ValueError:
                 print_error("Please enter a whole number for diastolic BP.")
 
-        # Pulse Rate
+
         while True:
             pulse_str = input("  Pulse / Heart Rate (bpm, e.g. 78): ").strip()
             try:
@@ -301,7 +301,7 @@ def handle_record_triage(
             except ValueError:
                 print_error("Please enter an integer pulse rate.")
 
-        # Respiratory Rate
+
         while True:
             resp_str = input("  Respiratory Rate (breaths/min, e.g. 16): ").strip()
             try:
@@ -313,7 +313,7 @@ def handle_record_triage(
             except ValueError:
                 print_error("Please enter an integer respiratory rate.")
 
-        # Oxygen Saturation (SpO2)
+
         while True:
             spo2_str = input("  Oxygen Saturation SpO2 (%, e.g. 98): ").strip()
             try:
@@ -325,7 +325,7 @@ def handle_record_triage(
             except ValueError:
                 print_error("Please enter an integer SpO2 percentage.")
 
-        # Pain Score
+
         while True:
             pain_str = input("  Pain Score (0 to 10, where 0=No Pain, 10=Worst Possible) [0]: ").strip() or "0"
             try:
@@ -337,7 +337,7 @@ def handle_record_triage(
             except ValueError:
                 print_error("Please enter a whole number between 0 and 10.")
 
-        # Evaluate screening criteria
+
         alerts, suggested_cat = evaluate_vital_signs(temp, bp_sys, bp_dia, pulse, resp, spo2, pain)
 
         screening_fields = {
@@ -356,7 +356,7 @@ def handle_record_triage(
             screening_fields["Alert Status"] = "All vital signs within normal reference ranges."
         render_card("TRIAGE ASSESSMENT CLINICAL SCREENING", screening_fields, border_style="yellow")
 
-        # Allow nurse to confirm or adjust triage urgency via Questionary
+
         from utils.prompts import select_option, select_menu, confirm_prompt
         from utils.display import render_card
         from utils.validators import TriageCreateModel, format_pydantic_error
@@ -370,7 +370,7 @@ def handle_record_triage(
 
         alert_text = " | ".join(alerts) if alerts else "None"
 
-        # Validate structured triage record with Pydantic
+
         try:
             trg_model = TriageCreateModel(
                 patient_id=patient["patient_id"],
@@ -392,7 +392,7 @@ def handle_record_triage(
             pause()
             return None
 
-        # Display Rich card summary
+
         render_card("NURSING TRIAGE ASSESSMENT SUMMARY", {
             "Patient": f"{patient['full_name']} ({patient['patient_id']})",
             "Triage Nurse": trg_model.nurse_user,

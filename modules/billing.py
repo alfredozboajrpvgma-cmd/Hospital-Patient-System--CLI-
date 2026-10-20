@@ -37,9 +37,9 @@ from modules.audit import log_audit_event
 from modules.auth import get_current_session
 
 
-# ==========================================
-# Database Operations
-# ==========================================
+
+
+
 
 def generate_bill_id(conn: sqlite3.Connection) -> str:
     """Generate the next bill ID like BIL-1001, BIL-1002."""
@@ -47,7 +47,7 @@ def generate_bill_id(conn: sqlite3.Connection) -> str:
     cursor.execute("SELECT bill_id FROM bills WHERE bill_id LIKE 'BIL-%' ORDER BY bill_id DESC")
     rows = cursor.fetchall()
 
-    # Find the highest bill number and add 1
+
     max_id_num = 1000
     for row in rows:
         bid = row["bill_id"]
@@ -67,7 +67,7 @@ def generate_payment_id(conn: sqlite3.Connection) -> str:
     cursor.execute("SELECT payment_id FROM payments WHERE payment_id LIKE 'PAY-%' ORDER BY payment_id DESC")
     rows = cursor.fetchall()
 
-    # Find the highest payment number and add 1
+
     max_id_num = 1000
     for row in rows:
         pid = row["payment_id"]
@@ -106,7 +106,7 @@ def create_bill(
     bill_id = generate_bill_id(conn)
     date_val = bill_date or date.today().strftime(DATE_FORMAT)
 
-    # Compute subtotal and apply discount if any
+
     subtotal = sum((amount for _, amount in items), Decimal("0.00"))
     total_amount = max(Decimal("0.00"), subtotal - discount_amount)
     subtotal_str = f"{subtotal:.2f}"
@@ -120,7 +120,7 @@ def create_bill(
     c_user = cashier_user or (session.full_name if session else "Cashier")
 
     cursor = conn.cursor()
-    # Check if extra columns like visit_id exist in this database
+
     cursor.execute("PRAGMA table_info(bills)")
     cols = [r[1] for r in cursor.fetchall()]
 
@@ -141,7 +141,7 @@ def create_bill(
             ) VALUES (?, ?, ?, ?, ?, ?, ?);
         """, (bill_id, patient_id, date_val, total_str, paid_str, balance_str, status))
 
-    # Save each service charged to this bill
+
     for desc, amt in items:
         cursor.execute("""
             INSERT INTO bill_items (bill_id, service_description, amount)
@@ -254,20 +254,20 @@ def record_payment(
     current_paid = Decimal(str(bill["paid_amount"]))
     total_amount = Decimal(str(bill["total_amount"]))
 
-    # Don't accept payment if bill was cancelled or already settled
+
     if bill["status"] == "Cancelled":
         return False, f"Bill '{bill_id}' has been cancelled. Payments cannot be accepted.", None
 
     if current_balance <= Decimal("0.00"):
         return False, f"Bill '{bill_id}' is already fully paid.", None
 
-    # If patient handed extra cash, calculate change (sukli)
+
     if amount_tendered is not None:
         tendered = amount_tendered
         applied = min(amount, current_balance)
         change = max(Decimal("0.00"), tendered - applied)
     else:
-        # If amount entered is greater than balance, treat the extra as change
+
         if amount > current_balance:
             tendered = amount
             applied = current_balance
@@ -277,11 +277,11 @@ def record_payment(
             applied = amount
             change = Decimal("0.00")
 
-    # Update paid total and remaining balance
+
     new_paid = current_paid + applied
     new_balance = max(Decimal("0.00"), current_balance - applied)
 
-    # Mark as Paid if balance reaches zero, otherwise Partially Paid
+
     if new_balance == Decimal("0.00"):
         new_status = "Paid"
     else:
@@ -294,7 +294,7 @@ def record_payment(
     session = get_current_session()
     c_user = cashier_user or (session.full_name if session else "Cashier")
 
-    # Save cash tendered and change in notes for the receipt
+
     full_notes = notes.strip() if notes else ""
     if change > Decimal("0.00"):
         change_note = f"Tendered: {CURRENCY_SYMBOL}{tendered:.2f} | Change: {CURRENCY_SYMBOL}{change:.2f}"
@@ -302,7 +302,7 @@ def record_payment(
             full_notes = f"{full_notes} [{change_note}]".strip() if full_notes else change_note
 
     try:
-        # Check for duplicate payment (same bill, amount, channel, and date)
+
         cursor.execute("""
             SELECT payment_id FROM payments
             WHERE UPPER(bill_id) = UPPER(?) AND amount = ? AND payment_method = ? AND payment_date = ?
@@ -450,9 +450,9 @@ def select_bill_interactive(
         print_error(f"Bill '{b_input}' not found. Type '?' to see bills or '0' to cancel.")
 
 
-# ==========================================
-# CLI Submenu and Handlers
-# ==========================================
+
+
+
 
 def handle_generate_bill(
     conn: sqlite3.Connection,
@@ -485,7 +485,7 @@ def handle_generate_bill(
 
         items: List[Tuple[str, Decimal]] = []
 
-        # Keep asking for items until user presses Enter on an empty line
+
         while True:
             item_num = len(items) + 1
             desc_input = input(f"Item #{item_num} Description (or press Enter to finish): ").strip()
@@ -502,7 +502,7 @@ def handle_generate_bill(
                 print_error(desc)
                 continue
 
-            # Get cost for this item
+
             while True:
                 charge_input = input(f"Item #{item_num} Amount ({CURRENCY_SYMBOL}): ").strip()
                 valid_amt, amt_decimal, err = validate_decimal_amount(charge_input, field_name=f"Charge for '{desc}'")
@@ -514,7 +514,7 @@ def handle_generate_bill(
 
         subtotal = sum((amt for _, amt in items), Decimal("0.00"))
 
-        # Philippine discounts (Senior Citizen, PWD, PhilHealth, Charity)
+
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import BillCreateModel, BillItemModel, format_pydantic_error
@@ -540,7 +540,7 @@ def handle_generate_bill(
 
         final_total = max(Decimal("0.00"), subtotal - discount_amount)
 
-        # Make sure the bill data is valid before saving
+
         try:
             bill_items_models = [BillItemModel(service_description=d, amount=a) for d, a in items]
             bill_model = BillCreateModel(
@@ -556,7 +556,7 @@ def handle_generate_bill(
             pause()
             return None
 
-        # Show bill summary card before saving
+
         render_card("HOSPITAL INVOICE SUMMARY", {
             "Patient": f"{patient['full_name']} ({patient['patient_id']})",
             "Visit Ref": visit_id or "Outpatient (Direct)",
@@ -607,13 +607,13 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
             pause()
             return
 
-        # Show current billing status
+
         print_info(f"Bill: {bill['bill_id']} | Patient: {bill['patient_name']}")
         print(f"  Total Amount:        {CURRENCY_SYMBOL}{Decimal(str(bill['total_amount'])):.2f}")
         print(f"  Already Paid:        {CURRENCY_SYMBOL}{Decimal(str(bill['paid_amount'])):.2f}")
         print(f"  Outstanding Balance: {CURRENCY_SYMBOL}{cur_balance:.2f}")
 
-        # Cashier enters amount paid (can be more than balance to get change)
+
         while True:
             amt_input = input(f"\nEnter payment / amount tendered [PHP] (Balance Due: {CURRENCY_SYMBOL}{cur_balance:.2f}): ").strip()
             if not amt_input:
@@ -628,7 +628,7 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
                 break
             print_error(err)
 
-        # Figure out amount applied to the bill and change (sukli)
+
         if tendered_amount >= cur_balance:
             pay_amount = cur_balance
             change_due = (tendered_amount - cur_balance).quantize(Decimal("0.01"))
@@ -639,7 +639,7 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
         if change_due > Decimal("0.00"):
             print_success(f"Amount tendered exceeds balance! Change to return (Sukli): {CURRENCY_SYMBOL}{change_due:,.2f}")
 
-        # Choose payment method (Cash, GCash, Maya, etc.)
+
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import PaymentCreateModel, format_pydantic_error
@@ -653,7 +653,7 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
 
         notes = input("Enter optional transaction notes / reference number: ").strip() or None
 
-        # Make sure the payment data is valid
+
         try:
             pay_model = PaymentCreateModel(
                 bill_id=bill["bill_id"],
@@ -669,7 +669,7 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
             pause()
             return
 
-        # Show payment preview with change before confirming
+
         card_info = {
             "Bill Reference": pay_model.bill_id,
             "Patient Name": bill["patient_name"],
@@ -685,7 +685,7 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
 
         render_card("PAYMENT COLLECTION & CHANGE SUMMARY", card_info)
 
-        # Confirm before saving payment
+
         confirm_label = (
             f"Confirm recording payment of {CURRENCY_SYMBOL}{pay_model.amount:.2f} "
             f"(Tendered: {CURRENCY_SYMBOL}{tendered_amount:.2f} | Change: {CURRENCY_SYMBOL}{change_due:.2f}) "
@@ -802,7 +802,7 @@ def handle_view_bill_details(conn: sqlite3.Connection) -> None:
     ])
     render_notice("ITEMIZED SERVICES", service_lines, border_style="cyan")
 
-    # Show transaction history if any payments exist
+
     if payments:
         payment_lines = []
         for p in payments:

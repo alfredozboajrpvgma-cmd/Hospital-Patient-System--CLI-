@@ -24,9 +24,9 @@ from utils.display import (
 )
 from config import CURRENCY_SYMBOL, CURRENCY_CODE, DATE_FORMAT
 
-# ==========================================
-# Database Commands
-# ==========================================
+
+
+
 
 def cmd_database_initialize() -> None:
     """Set up the SQLite database and default demo accounts."""
@@ -38,9 +38,9 @@ def cmd_database_initialize() -> None:
         raise SystemExit(1)
 
 
-# ==========================================
-# Patient Commands
-# ==========================================
+
+
+
 
 def cmd_patients_list(
     status: Optional[str] = None
@@ -115,9 +115,9 @@ def cmd_patients_view(
         conn.close()
 
 
-# ==========================================
-# Appointment Commands
-# ==========================================
+
+
+
 
 def cmd_appointments_list(
     target_date: Optional[str] = None
@@ -165,9 +165,9 @@ def cmd_appointments_list(
         conn.close()
 
 
-# ==========================================
-# Report Commands
-# ==========================================
+
+
+
 
 def cmd_reports_daily() -> None:
     """Show daily patient intake registrations and operational metrics."""

@@ -21,9 +21,9 @@ from utils.validators import validate_menu_choice
 from config import CURRENCY_SYMBOL, CURRENCY_CODE
 
 
-# ==========================================
-# Database Aggregation Queries
-# ==========================================
+
+
+
 
 def get_patient_statistics(conn: sqlite3.Connection) -> Dict[str, int]:
     """Count total, active, and archived patients."""
@@ -49,7 +49,7 @@ def get_appointment_statistics(conn: sqlite3.Connection) -> Dict[str, Any]:
     cursor.execute("SELECT COUNT(*) as total FROM appointments;")
     total = cursor.fetchone()["total"]
 
-    # Count by status (Scheduled, Rescheduled, Completed, Cancelled)
+
     cursor.execute("""
         SELECT status, COUNT(*) as count 
         FROM appointments 
@@ -57,7 +57,7 @@ def get_appointment_statistics(conn: sqlite3.Connection) -> Dict[str, Any]:
     """)
     status_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
 
-    # Count by department
+
     cursor.execute("""
         SELECT department, COUNT(*) as count 
         FROM appointments 
@@ -91,7 +91,7 @@ def get_visit_summary(conn: sqlite3.Connection, group_by: str = "department") ->
             ORDER BY period DESC
             LIMIT 15;
         """)
-    else:  # Department
+    else:
         cursor.execute("""
             SELECT department as period, COUNT(*) as count
             FROM visits
@@ -113,11 +113,11 @@ def get_financial_statistics(conn: sqlite3.Connection) -> Dict[str, Any]:
     total_balance = Decimal("0.00")
     status_counts = {"Unpaid": 0, "Partially Paid": 0, "Paid": 0, "Cancelled": 0}
 
-    # Add up amounts from all bills (skip cancelled ones)
+
     for b in bills:
         st = b["status"]
         status_counts[st] = status_counts.get(st, 0) + 1
-        # Cancelled bills are voided, so ignore them in financial totals
+
         if st != "Cancelled":
             total_billed += Decimal(str(b["total_amount"]))
             total_paid += Decimal(str(b["paid_amount"]))
@@ -132,9 +132,9 @@ def get_financial_statistics(conn: sqlite3.Connection) -> Dict[str, Any]:
     }
 
 
-# ==========================================
-# CLI Submenu and Handlers
-# ==========================================
+
+
+
 
 def handle_patient_report(conn: sqlite3.Connection) -> None:
     """Show patient population summary on screen."""
@@ -216,25 +216,25 @@ def handle_comprehensive_dashboard(conn: sqlite3.Connection) -> None:
     f_stats = get_financial_statistics(conn)
 
     cursor = conn.cursor()
-    # Appointments scheduled for today
+
     cursor.execute("""
         SELECT COUNT(*) as count FROM appointments
         WHERE appointment_date = date('now') AND status IN ('Scheduled', 'Rescheduled');
     """)
     appts_today = cursor.fetchone()["count"]
 
-    # Patients waiting in daily queue today
+
     cursor.execute("""
         SELECT COUNT(*) as count FROM queue_tickets
         WHERE ticket_date = date('now') AND status = 'Waiting';
     """)
     queue_waiting = cursor.fetchone()["count"]
 
-    # Completed clinical visits
+
     cursor.execute("SELECT COUNT(*) as count FROM visits WHERE visit_status = 'Completed';")
     v_total = cursor.fetchone()["count"]
 
-    # Unpaid / partially paid bills count
+
     cursor.execute("SELECT COUNT(*) as count FROM bills WHERE status != 'Paid';")
     unpaid_bills_cnt = cursor.fetchone()["count"]
 
@@ -271,7 +271,7 @@ def handle_triage_alerts_report(conn: sqlite3.Connection) -> None:
         "ℹ️  Non-Urgent": cat_counts.get("Non-Urgent", 0),
     }, border_style="red")
 
-    # Fetch recent clinical alerts
+
     cursor.execute("""
         SELECT t.triage_id, t.triage_date, p.full_name, t.triage_category, t.clinical_alerts
         FROM triage_records t

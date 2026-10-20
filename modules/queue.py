@@ -103,7 +103,7 @@ def get_daily_queue(
         query += " AND q.status = ?"
         params.append(status_filter)
 
-    # Put Emergency tickets at the top, then Scheduled, then Walk-ins
+
     query += """
         ORDER BY 
             CASE q.ticket_type 
@@ -132,7 +132,7 @@ def update_queue_status(conn: sqlite3.Connection, ticket_id: str, new_status: st
     if current_status == new_status:
         return True
 
-    # Check if the status change is valid
+
     from config import VALID_QUEUE_TRANSITIONS
     if enforce_transitions:
         allowed = VALID_QUEUE_TRANSITIONS.get(current_status, [])
@@ -193,9 +193,9 @@ def get_queue_ticket_by_id(conn: sqlite3.Connection, ticket_id: str) -> Optional
     return cursor.fetchone()
 
 
-# ==========================================
-# CLI Submenus and Handlers
-# ==========================================
+
+
+
 
 def handle_view_daily_queue(conn: sqlite3.Connection) -> None:
     """Display the active daily queue."""

@@ -30,9 +30,9 @@ from modules.auth import get_current_session
 from modules.queue import issue_queue_ticket
 
 
-# ==========================================
-# Database Operations
-# ==========================================
+
+
+
 
 def generate_appointment_id(conn: sqlite3.Connection) -> str:
     """Generate the next appointment ID like APT-1001, APT-1002, etc."""
@@ -64,7 +64,7 @@ def check_appointment_conflict(
     """Check if the patient or department already has a booking at this time."""
     cursor = conn.cursor()
 
-    # Check 1: Make sure this patient isn't already booked at this time
+
     query_patient = """
         SELECT appointment_id FROM appointments
         WHERE patient_id = ? 
@@ -73,7 +73,7 @@ def check_appointment_conflict(
           AND status IN ('Scheduled', 'Rescheduled')
     """
     params_patient = [patient_id, appointment_date, appointment_time]
-    # If we are rescheduling, don't count the current appointment as a conflict
+
     if exclude_appointment_id:
         query_patient += " AND appointment_id != ?"
         params_patient.append(exclude_appointment_id)
@@ -83,7 +83,7 @@ def check_appointment_conflict(
     if patient_conflict:
         return True, f"Patient already has an active appointment ({patient_conflict['appointment_id']}) at {appointment_date} {appointment_time}."
 
-    # Check 2: Make sure the department slot isn't already taken by another patient
+
     query_dept = """
         SELECT appointment_id FROM appointments
         WHERE department = ? 
@@ -201,7 +201,7 @@ def reschedule_appointment(
     if not apt:
         return False, f"Appointment '{appointment_id}' not found."
 
-    # Cannot reschedule appointments that are already cancelled, completed, or checked-in
+
     if apt["status"] == "Cancelled":
         return False, "Cannot reschedule a cancelled appointment."
     if apt["status"] == "Completed":
@@ -209,7 +209,7 @@ def reschedule_appointment(
     if apt["status"] == "Checked-In":
         return False, "Cannot reschedule an appointment that has already checked in."
 
-    # Make sure the new slot is free
+
     conflict, msg = check_appointment_conflict(
         conn, new_date, new_time, apt["department"], apt["patient_id"], exclude_appointment_id=appointment_id
     )
@@ -304,9 +304,9 @@ def mark_appointment_noshow(conn: sqlite3.Connection, appointment_id: str) -> Tu
     return True, "Appointment status updated to 'No-Show'."
 
 
-# ==========================================
-# CLI Submenu and Handlers
-# ==========================================
+
+
+
 
 def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
     """Interactive screen for booking an appointment."""
@@ -329,7 +329,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
 
         print_info(f"Booking for: {patient['full_name']} (ID: {patient['patient_id']})")
 
-        # Date of appointment (cannot be in the past)
+
         while True:
             date_input = input("Enter Appointment Date (YYYY-MM-DD): ").strip()
             if not date_input:
@@ -342,7 +342,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
                 break
             print_error(res)
 
-        # Time of appointment
+
         while True:
             time_input = input("Enter Appointment Time (HH:MM in 24hr format, e.g., 09:30): ").strip()
             if not time_input:
@@ -355,7 +355,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
                 break
             print_error(res)
 
-        # Select department using arrow keys
+
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import AppointmentCreateModel, format_pydantic_error
@@ -370,7 +370,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
 
             department = dept_selected
 
-            # If user picked ER, warn that emergencies go straight to intake without booking
+
             if department == "Emergency Room (ER)":
                 render_notice(
                     "EMERGENCY NOTICE",
@@ -389,7 +389,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
                     continue
             break
 
-        # Reason for consultation
+
         while True:
             reason_input = input("Enter Reason for Appointment: ").strip()
             if not reason_input:
@@ -401,7 +401,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
                 print_error(res)
                 continue
 
-            # Check for emergency words like chest pain or stroke
+
             emergency_keywords = ["heart attack", "cardiac", "chest pain", "stroke", "emergency", "trauma", "unconscious", "severe bleeding"]
             if any(kw in res.lower() for kw in emergency_keywords):
                 render_notice(
@@ -421,7 +421,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
             reason = res
             break
 
-        # Validate data before saving
+
         try:
             apt_model = AppointmentCreateModel(
                 patient_id=patient["patient_id"],
@@ -435,7 +435,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
             pause()
             return
 
-        # Make sure there is no double-booking
+
         has_conflict, conflict_msg = check_appointment_conflict(
             conn, apt_model.appointment_date, apt_model.appointment_time, apt_model.department, apt_model.patient_id
         )
@@ -444,7 +444,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
             pause()
             return
 
-        # Show appointment preview before saving
+
         render_card("OUTPATIENT APPOINTMENT PREVIEW", {
             "Patient": f"{patient['full_name']} ({patient['patient_id']})",
             "Date": apt_model.appointment_date,
@@ -549,18 +549,18 @@ def select_appointment_interactive(
             print_table(headers, rows)
             continue
 
-        # Check exact ID first
+
         apt = get_appointment_by_id(conn, user_input)
         if apt:
             return apt
 
-        # If user entered digits like '1001', try 'APT-1001'
+
         if user_input.isdigit():
             apt = get_appointment_by_id(conn, f"APT-{user_input}")
             if apt:
                 return apt
 
-        # Search by patient name or partial text
+
         matches = search_appointments(conn, user_input)
         if len(matches) == 1:
             print_info(f"Found match: {matches[0]['appointment_id']} - {matches[0]['patient_name']}")
@@ -605,7 +605,7 @@ def handle_reschedule_appointment(conn: sqlite3.Connection) -> None:
 
     print_info(f"Current Schedule: {apt['appointment_date']} at {apt['appointment_time']} for {apt['patient_name']} ({apt['department']})")
 
-    # New Date
+
     while True:
         new_date_input = input("Enter New Date (YYYY-MM-DD): ").strip()
         if not new_date_input:
@@ -618,7 +618,7 @@ def handle_reschedule_appointment(conn: sqlite3.Connection) -> None:
             break
         print_error(res)
 
-    # New Time
+
     while True:
         new_time_input = input("Enter New Time (HH:MM in 24hr format): ").strip()
         if not new_time_input:
