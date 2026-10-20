@@ -62,45 +62,21 @@ The system uses Role-Based Access Control (RBAC) with salted password hashing (P
 
 ## Project Structure
 
+This branch contains the runtime files and setup instructions:
+
+```text
+main.py             # Launch the interactive system
+cli.py              # Command-line lookups and reports
+config.py           # Settings and database location
+database.py         # SQLite setup and migrations
+requirements.txt    # Rich for colored tables and panels
+modules/            # Hospital workflows, accounts, audit, and reports
+utils/              # Display, prompts, and validation support
+README.md           # Installation and usage
+.gitignore          # Excludes local data and development files
 ```
-Hospital Patient System (CLI)/
-├── main.py                     # Entry point (interactive menu or CLI command router)
-├── cli.py                      # Standard-library argparse subcommands
-├── database.py                 # SQLite schema, migrations, connection, and seed accounts
-├── config.py                   # Constants, departments, vital sign ranges, and discount rates
-├── requirements.txt            # Rich dependency for the colored interface
-├── README.md                   # Project documentation
-├── SYSTEM_DOCUMENTATION_AND_DEFENSE_GUIDE.md # Defense notes and technical explanation
-├── data/
-│   └── hospital.db             # SQLite database file (created on first run)
-├── modules/
-│   ├── auth.py                 # User authentication, PBKDF2 hashing, and RBAC checks
-│   ├── patients.py             # Patient registration, search, and soft-delete archival
-│   ├── appointments.py         # Scheduling, conflict checks, and check-ins
-│   ├── queue.py                # Daily queue ticket numbers and status transitions
-│   ├── triage.py               # Vital signs entry, screening alert rules, and allergies
-│   ├── visits.py               # Clinical consultations (SOAP format) and ER intake
-│   ├── billing.py              # Invoices, Philippine discounts, payments, change, and receipts
-│   ├── audit.py                # System audit trail logger
-│   └── reports.py              # Operational and financial summary calculations
-├── utils/
-│   ├── display.py              # Rich tables, panels, cards, and dashboard
-│   ├── prompts.py              # Questionary interactive inputs with fallback
-│   └── validators.py           # Input schemas and validation rules
-└── tests/
-    ├── test_auth.py            # RBAC and session tests
-    ├── test_patients.py        # Patient management and duplicate check tests
-    ├── test_appointments.py    # Conflict detection and appointment tests
-    ├── test_queue.py           # Queue generation and status update tests
-    ├── test_triage.py          # Vital sign assessment tests
-    ├── test_visits.py          # Clinical consultation tests
-    ├── test_billing.py         # Billing, discounts, payments, and change tests
-    ├── test_validators.py      # Procedural validator tests
-    ├── test_pydantic_models.py # Input schema tests
-    ├── test_rich_display.py    # Terminal rendering tests
-    ├── test_cli_commands.py    # CLI command tests
-    └── test_workflow_improvements.py # Comprehensive workflow integration tests
-```
+
+Keep all runtime Python files, including package `__init__.py` files and the display fallback. They support the application's imports and features. Tests, the defense guide, and the desktop build specification are excluded from this branch.
 
 ---
 
@@ -159,26 +135,6 @@ py main.py reports daily
 
 # Initialize or verify the database tables
 py main.py database initialize
-```
-
----
-
-## Running Automated Tests
-
-All tests run against temporary in-memory databases (`:memory:`), so running tests will never modify or delete your actual records in `data/hospital.db`.
-
-To run all 75 unit tests:
-```powershell
-python -m unittest discover tests
-# or:
-py -m unittest discover tests
-```
-
-Expected output:
-```text
-Ran 75 tests in ~13s
-
-OK
 ```
 
 ---
