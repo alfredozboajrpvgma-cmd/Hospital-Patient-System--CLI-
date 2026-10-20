@@ -58,7 +58,8 @@ def select_menu(
     # Numbered fallback for standard terminals
     console.print(f"\n[bold cyan]{title}[/bold cyan]")
     for idx, opt in enumerate(choices, 1):
-        console.print(f"  {idx}. {opt}")
+        label = opt.split(". ", 1)[1] if opt.split(". ", 1)[0].isdigit() else opt
+        console.print(f"  {idx}. {label}")
     
     try:
         user_input = input(f"Enter choice (1-{len(choices)}, or 0 to cancel): ").strip()
@@ -66,7 +67,7 @@ def select_menu(
             return None
         if user_input.isdigit() and 1 <= int(user_input) <= len(choices):
             return choices[int(user_input) - 1]
-    except (KeyboardInterrupt, EOFError):
+    except KeyboardInterrupt:
         return None
 
     return None

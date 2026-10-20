@@ -5,7 +5,7 @@ Verifies data type enforcement, boundaries, normalization, and staff-friendly er
 
 import unittest
 from decimal import Decimal
-from pydantic import ValidationError
+from utils.schema import ValidationError
 
 from utils.validators import (
     PatientCreateModel,

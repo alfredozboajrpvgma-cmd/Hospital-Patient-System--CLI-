@@ -15,6 +15,8 @@ from utils.display import (
     print_warning,
     print_info,
     print_table,
+    render_card,
+    render_notice,
     confirm_action,
     pause
 )
@@ -516,7 +518,7 @@ def handle_generate_bill(
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import BillCreateModel, BillItemModel, format_pydantic_error
-        from pydantic import ValidationError
+        from utils.schema import ValidationError
 
         chosen_discount = select_option("Select Philippine Statutory Discount / Benefit:", DISCOUNT_TYPES) or "None"
 
@@ -641,7 +643,7 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import PaymentCreateModel, format_pydantic_error
-        from pydantic import ValidationError
+        from utils.schema import ValidationError
 
         payment_method = select_option("Select Payment Channel (PH Healthcare & E-Wallets):", VALID_PAYMENT_METHODS)
         if not payment_method:
@@ -701,14 +703,11 @@ def handle_record_payment(conn: sqlite3.Connection) -> None:
             if success:
                 print_success(f"{msg} (Payment ID: {pay_id})")
                 if change_due > Decimal("0.00"):
-                    from rich.panel import Panel
-                    from utils.display import console
-                    console.print(Panel(
-                        f"[bold green]CHANGE TO RETURN TO PATIENT (SUKLI):[/bold green] [bold yellow]{CURRENCY_SYMBOL}{change_due:,.2f}[/bold yellow]",
-                        title="[bold cyan]CASH CHANGE DISPENSED[/bold cyan]",
+                    render_notice(
+                        "CASH CHANGE DISPENSED",
+                        [f"CHANGE TO RETURN TO PATIENT (SUKLI): {CURRENCY_SYMBOL}{change_due:,.2f}"],
                         border_style="green",
-                        expand=False
-                    ))
+                    )
             else:
                 print_error(msg)
         else:
@@ -782,31 +781,33 @@ def handle_view_bill_details(conn: sqlite3.Connection) -> None:
     items = get_bill_items(conn, bill["bill_id"])
     payments = get_payments_by_bill(conn, bill["bill_id"])
 
-    print()
-    print("=" * 70)
-    print(f"  HOSPITAL INVOICE: {bill['bill_id']}")
-    print("=" * 70)
-    print(f"  Patient:             {bill['patient_name']} ({bill['patient_id']})")
-    print(f"  Contact:             {bill['contact_number']}")
-    print(f"  Invoice Date:        {bill['bill_date']}")
-    print(f"  Status:              {bill['status']}")
-    print("-" * 70)
-    print("  ITEMIZED SERVICES:")
+    render_card(f"HOSPITAL INVOICE: {bill['bill_id']}", {
+        "Patient": f"{bill['patient_name']} ({bill['patient_id']})",
+        "Contact": bill["contact_number"],
+        "Invoice Date": bill["bill_date"],
+        "Status": bill["status"],
+    })
+
+    service_lines = []
     for idx, item in enumerate(items, 1):
         amt = Decimal(str(item["amount"]))
-        print(f"    {idx}. {item['service_description'].ljust(45)} {CURRENCY_SYMBOL}{amt:>9.2f}")
-    print("-" * 70)
-    print(f"  TOTAL AMOUNT:        {CURRENCY_SYMBOL}{Decimal(str(bill['total_amount'])):.2f}")
-    print(f"  PAID AMOUNT:         {CURRENCY_SYMBOL}{Decimal(str(bill['paid_amount'])):.2f}")
-    print(f"  OUTSTANDING BALANCE: {CURRENCY_SYMBOL}{Decimal(str(bill['balance'])):.2f}")
-    print("-" * 70)
+        service_lines.append(f"{idx}. {item['service_description']}  —  {CURRENCY_SYMBOL}{amt:,.2f}")
+    if not service_lines:
+        service_lines.append("No service items on this invoice.")
+    service_lines.extend([
+        "",
+        f"TOTAL AMOUNT:         {CURRENCY_SYMBOL}{Decimal(str(bill['total_amount'])):,.2f}",
+        f"PAID AMOUNT:          {CURRENCY_SYMBOL}{Decimal(str(bill['paid_amount'])):,.2f}",
+        f"OUTSTANDING BALANCE:  {CURRENCY_SYMBOL}{Decimal(str(bill['balance'])):,.2f}",
+    ])
+    render_notice("ITEMIZED SERVICES", service_lines, border_style="cyan")
 
     # Show transaction history if any payments exist
     if payments:
-        print("  PAYMENT TRANSACTIONS:")
+        payment_lines = []
         for p in payments:
             amt = Decimal(str(p["amount"]))
-            note_str = f" ({p['notes']})" if p['notes'] else ""
+            note_str = f" ({p['notes']})" if p["notes"] else ""
             tendered_str = ""
             p_keys = p.keys() if hasattr(p, "keys") else []
             if "amount_tendered" in p_keys and p["amount_tendered"]:
@@ -814,10 +815,13 @@ def handle_view_bill_details(conn: sqlite3.Connection) -> None:
                 c_amt = Decimal(str(p["change_amount"])) if ("change_amount" in p_keys and p["change_amount"]) else Decimal("0.00")
                 if c_amt > Decimal("0.00"):
                     tendered_str = f" [Tendered: {CURRENCY_SYMBOL}{t_amt:.2f} | Change: {CURRENCY_SYMBOL}{c_amt:.2f}]"
-            print(f"    * {p['payment_date']} | {p['payment_id']} | {p['payment_method']} | {CURRENCY_SYMBOL}{amt:.2f}{tendered_str}{note_str}")
+            payment_lines.append(
+                f"{p['payment_date']} | {p['payment_id']} | {p['payment_method']} | "
+                f"{CURRENCY_SYMBOL}{amt:.2f}{tendered_str}{note_str}"
+            )
+        render_notice("PAYMENT TRANSACTIONS", payment_lines, border_style="green")
     else:
-        print("  No payments recorded for this bill.")
-    print("=" * 70)
+        render_notice("PAYMENT TRANSACTIONS", ["No payments recorded for this bill."], border_style="dim")
     pause()
 
 

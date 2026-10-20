@@ -2,7 +2,7 @@
 
 A terminal-based hospital information system written in Python and SQLite for managing outpatient visits, emergency intake, nursing triage, doctor consultations, and cashier billing. Built as a college project for Batangas State University (BatStateU - TNEU).
 
-The application features an interactive terminal interface using **Rich** (tables, colored status badges, dashboard panels) and **Questionary** (arrow-key navigation), with data validation handled by **Pydantic v2** and scriptable subcommands powered by **Typer**.
+The application runs with Python's standard library only. Android users need **Pydroid 3**; no pip packages, Pydantic, or Pydantic Core are required. Numbered menus and wrapped text support basic terminals and phone consoles. Existing Rich and Questionary installations can optionally enhance the interface.
 
 ---
 
@@ -52,24 +52,23 @@ The system uses Role-Based Access Control (RBAC) with salted password hashing (P
 
 ---
 
-## Libraries Used
+## Runtime and Compatibility
 
-- **[Rich](https://github.com/Textualize/rich)**: Formats terminal output with bordered tables, colored status badges (Active/Archived, Paid/Unpaid/Cancelled), summary cards, and an executive dashboard. Configured to work safely on Windows `cmd.exe` and PowerShell without character encoding crashes.
-- **[Questionary](https://github.com/tmbo/questionary)**: Provides arrow-key menu navigation, interactive list pickers, and confirmation prompts. Automatically falls back to standard numbered inputs if running in non-interactive terminals or scripts.
-- **[Pydantic v2](https://github.com/pydantic/pydantic)**: Validates incoming data models (dates, string lengths, blood pressure invariants, positive decimal amounts) before queries touch SQLite. Errors are formatted into readable bullet points instead of raw tracebacks.
-- **[Typer](https://github.com/fastapi/typer)**: Adds command-line flags and subcommands for direct queries (e.g. `python main.py patients list`) without needing to click through the interactive menu.
-
----
+- Python 3.8+ with SQLite: Android (Pydroid 3), Windows, macOS, and Linux.
+- Standard-library validation, `argparse` subcommands, and SQLite storage.
+- Rich and Questionary are optional; the app works without them.
+- Pydroid 3 is an Android app. iPhone/iPad require a separate Python environment with SQLite and console input; this version has not been tested on iOS.
+- Physical Android device verification remains necessary; automated checks run on Windows without third-party packages.
 
 ## Project Structure
 
 ```
 Hospital Patient System (CLI)/
 ├── main.py                     # Entry point (interactive menu or CLI command router)
-├── cli.py                      # Typer subcommands implementation
+├── cli.py                      # Standard-library argparse subcommands
 ├── database.py                 # SQLite schema, migrations, connection, and seed accounts
 ├── config.py                   # Constants, departments, vital sign ranges, and discount rates
-├── requirements.txt            # Python dependencies (Rich, Questionary, Pydantic, Typer)
+├── requirements.txt            # Documents that no pip packages are required
 ├── README.md                   # Project documentation
 ├── SYSTEM_DOCUMENTATION_AND_DEFENSE_GUIDE.md # Defense notes and technical explanation
 ├── data/
@@ -87,7 +86,7 @@ Hospital Patient System (CLI)/
 ├── utils/
 │   ├── display.py              # Rich tables, panels, cards, and dashboard
 │   ├── prompts.py              # Questionary interactive inputs with fallback
-│   └── validators.py           # Pydantic models and input validation rules
+│   └── validators.py           # Input schemas and validation rules
 └── tests/
     ├── test_auth.py            # RBAC and session tests
     ├── test_patients.py        # Patient management and duplicate check tests
@@ -97,9 +96,9 @@ Hospital Patient System (CLI)/
     ├── test_visits.py          # Clinical consultation tests
     ├── test_billing.py         # Billing, discounts, payments, and change tests
     ├── test_validators.py      # Procedural validator tests
-    ├── test_pydantic_models.py # Pydantic v2 schema tests
+    ├── test_pydantic_models.py # Input schema tests
     ├── test_rich_display.py    # Terminal rendering tests
-    ├── test_cli_commands.py    # Typer command tests
+    ├── test_cli_commands.py    # CLI command tests
     └── test_workflow_improvements.py # Comprehensive workflow integration tests
 ```
 
@@ -107,14 +106,18 @@ Hospital Patient System (CLI)/
 
 ## Installation & How to Run
 
-### Requirements
-- Python 3.8 or newer (tested on Python 3.12 64-bit on Windows)
-- pip
+### Android / Pydroid 3
 
-### 1. Install Dependencies
-```powershell
-pip install -r requirements.txt
-```
+1. Copy or extract the **entire project folder** to a writable location on your device. Keep `modules/` and `utils/` beside `main.py`.
+2. Open `main.py` in Pydroid 3 and press Run.
+3. Enter menu numbers and press Enter. Log in using a demo account below.
+4. No pip installation or compiler is needed. The database is created at `data/hospital.db` beside the project.
+
+If Android denies storage access, move the project into a folder Pydroid can write to and grant its requested file access. Back up `data/hospital.db` before moving or updating the project. You may override the data directory using the `HOSPITAL_DATA_DIR` environment variable before launching Python.
+
+### Desktop Requirements
+
+Python 3.8 or newer with SQLite. No external packages are required.
 
 ### 2. Run the Interactive App
 Launch the main menu:

@@ -178,7 +178,7 @@ def record_payment(conn, bill_id, amount, payment_method, notes="", amount_tende
 - Supports cash payments that exceed the outstanding balance (Cash Tendered):
   - Automatically calculates exact change (`change = amount_tendered - current_balance`).
   - Caps the amount credited towards the bill to `current_balance`.
-  - Prominently displays the change due (*Sukli*) in a Rich panel and prints it on the Official Receipt.
+  - Prominently displays the change due (*Sukli*) in a terminal summary and prints it on the Official Receipt.
 - Computes `new_balance = max(0, current_balance - applied_amount)` using Python's `Decimal` type to prevent floating-point rounding errors.
 - Updates the bill's status:
   - If the new balance is 0, status transitions to `Paid`.
@@ -296,3 +296,8 @@ Follow these steps during your live presentation so your demo goes smoothly:
 
 *Created exclusively for a school project in Westmead International School.*
 
+
+
+## Portable Runtime Update
+
+Run the complete project in Pydroid 3 on Android, or Python 3.8+ with SQLite on desktop. No pip installations, Pydantic, or Pydantic Core are needed. Input schemas use `utils/schema.py`; CLI commands use `argparse`; basic consoles use `utils/plain_display.py`. Rich and Questionary remain optional enhancements. Back up `data/hospital.db` before updates. Physical Android and iOS testing has not been performed.

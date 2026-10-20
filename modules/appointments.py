@@ -14,6 +14,7 @@ from utils.display import (
     print_warning,
     print_info,
     print_table,
+    render_notice,
     confirm_action,
     pause
 )
@@ -358,7 +359,7 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import AppointmentCreateModel, format_pydantic_error
-        from pydantic import ValidationError
+        from utils.schema import ValidationError
 
         while True:
             dept_selected = select_option("Select Hospital Department:", DEPARTMENTS)
@@ -371,11 +372,14 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
 
             # If user picked ER, warn that emergencies go straight to intake without booking
             if department == "Emergency Room (ER)":
-                print()
-                print_warning("=" * 68)
-                print_warning("  [EMERGENCY NOTICE] Emergency Room (ER) does NOT use appointments!")
-                print_warning("  Heart attack, trauma, and critical cases are treated immediately.")
-                print_warning("=" * 68)
+                render_notice(
+                    "EMERGENCY NOTICE",
+                    [
+                        "Emergency Room (ER) does NOT use appointments!",
+                        "Heart attack, trauma, and critical cases are treated immediately.",
+                    ],
+                    border_style="red",
+                )
                 if confirm_prompt("Do you want to log an IMMEDIATE Emergency (ER) Visit right now?", default=True):
                     from modules.visits import handle_emergency_visit
                     handle_emergency_visit(conn, preselected_patient=patient)
@@ -400,13 +404,15 @@ def handle_schedule_appointment(conn: sqlite3.Connection) -> None:
             # Check for emergency words like chest pain or stroke
             emergency_keywords = ["heart attack", "cardiac", "chest pain", "stroke", "emergency", "trauma", "unconscious", "severe bleeding"]
             if any(kw in res.lower() for kw in emergency_keywords):
-                print()
-                print_warning("=" * 68)
-                print_warning("  [CRITICAL MEDICAL ALERT]")
-                print_warning(f"  '{res}' is an acute medical emergency!")
-                print_warning("  A heart attack / emergency case does NOT need an appointment.")
-                print_warning("  The patient must be seen immediately in the Emergency Room (ER)!")
-                print_warning("=" * 68)
+                render_notice(
+                    "CRITICAL MEDICAL ALERT",
+                    [
+                        f"'{res}' is an acute medical emergency!",
+                        "A heart attack / emergency case does NOT need an appointment.",
+                        "The patient must be seen immediately in the Emergency Room (ER)!",
+                    ],
+                    border_style="red",
+                )
                 if confirm_prompt("Transfer directly to Emergency ER Visit intake right now?", default=True):
                     from modules.visits import handle_emergency_visit
                     handle_emergency_visit(conn, preselected_patient=patient, default_notes=res)

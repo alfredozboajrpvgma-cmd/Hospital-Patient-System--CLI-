@@ -41,7 +41,7 @@ from modules.billing import (
 )
 from modules.reports import get_financial_statistics
 from utils.validators import VisitCreateModel
-from pydantic import ValidationError
+from utils.schema import ValidationError
 
 
 class TestWorkflowImprovements(unittest.TestCase):

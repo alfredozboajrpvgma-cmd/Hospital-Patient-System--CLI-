@@ -7,13 +7,17 @@ from typing import List, Any, Optional, Dict
 from decimal import Decimal
 import sys
 
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.text import Text
-from rich import box
-from rich.columns import Columns
-from rich.rule import Rule
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich.text import Text
+    from rich import box
+    from rich.columns import Columns
+    from rich.padding import Padding
+    from rich.constrain import Constrain
+except ImportError:
+    from utils.plain_display import Console, Table, Panel, Text, box, Columns, Padding, Constrain
 
 # Make sure Windows terminal displays the Philippine Peso symbol (₱) correctly
 if hasattr(sys.stdout, "reconfigure"):
@@ -26,9 +30,27 @@ if hasattr(sys.stdout, "reconfigure"):
 # Rich Console used for all colored terminal printing
 console = Console(highlight=False)
 
+# Cap content width so large terminals stay readable and centered
+CONTENT_MAX = 100
 
-def print_header(title: str, subtitle: Optional[str] = None, width: int = 75) -> None:
+
+def _ui_width(preferred: Optional[int] = None) -> int:
+    """Return a readable content width capped for wide terminals."""
+    term = console.width or CONTENT_MAX
+    cap = preferred if preferred is not None else CONTENT_MAX
+    return max(10, min(term, cap))
+
+
+def _print_centered(renderable, width: Optional[int] = None) -> None:
+    """Print a renderable in a centered content band (works on wide terminals)."""
+    band = width if width is not None else _ui_width()
+    left = max(0, ((console.width or band) - band) // 2)
+    console.print(Padding(renderable, (0, 0, 0, left)))
+
+
+def print_header(title: str, subtitle: Optional[str] = None, width: Optional[int] = None) -> None:
     """Print a styled section header panel."""
+    band = _ui_width(width)
     content = Text()
     content.append(f"  {title.upper()}  ", style="bold white on navy_blue")
     if subtitle:
@@ -39,21 +61,25 @@ def print_header(title: str, subtitle: Optional[str] = None, width: int = 75) ->
         border_style="bold cyan",
         box=box.ROUNDED,
         padding=(0, 1),
-        expand=False
+        width=band,
+        expand=True,
     )
     console.print()
-    console.print(panel)
+    _print_centered(panel, width=band)
 
 
-def print_subheader(title: str, width: int = 75) -> None:
-    """Print a section divider line."""
+def print_subheader(title: str, width: Optional[int] = None) -> None:
+    """Print a section divider centered within the content band."""
+    band = _ui_width(width)
     console.print()
-    rule = Rule(
-        title=f"[bold cyan] {title.upper()} [/bold cyan]",
-        style="bright_blue",
-        align="left"
-    )
-    console.print(rule)
+    _print_centered(Panel(
+        Text(f" {title.upper()} ", style="bold cyan", justify="center"),
+        border_style="bright_blue",
+        box=box.ROUNDED,
+        padding=(0, 1),
+        width=band,
+        expand=True,
+    ), width=band)
 
 
 def print_success(message: str) -> None:
@@ -98,7 +124,7 @@ def _style_cell_content(col_header: str, val_str: str) -> str:
     if "category" in header_lower or "urgency" in header_lower:
         if "emergency" in val_lower:
             return f"[bold red]🚨 {val_str}[/bold red]"
-        elif "urgent" in val_lower:
+        elif val_lower == "urgent":
             return f"[bold yellow]⚠️ {val_str}[/bold yellow]"
         elif "non-urgent" in val_lower:
             return f"[bold green]ℹ️ {val_str}[/bold green]"
@@ -119,9 +145,16 @@ def print_table(
     title: Optional[str] = None
 ) -> None:
     """Print records in a clean table with borders and colored statuses."""
+    width = _ui_width()
     if not rows:
         console.print()
-        console.print(Panel(f"[italic dim]{empty_message}[/italic dim]", border_style="dim", box=box.ROUNDED))
+        _print_centered(Panel(
+            f"[italic dim]{empty_message}[/italic dim]",
+            border_style="dim",
+            box=box.ROUNDED,
+            width=width,
+            expand=True,
+        ), width=width)
         console.print()
         return
 
@@ -134,7 +167,8 @@ def print_table(
         show_header=True,
         show_lines=False,
         pad_edge=True,
-        expand=False
+        expand=True,
+        width=width,
     )
 
     num_cols = len(headers)
@@ -162,23 +196,60 @@ def print_table(
         table.add_row(*formatted_row)
 
     console.print()
-    console.print(table)
-    console.print(f"[dim]  Total records: {len(rows)}[/dim]")
+    _print_centered(table, width=width)
+    _print_centered(Text(f"  Total records: {len(rows)}", style="dim"), width=width)
     console.print()
 
 
 def render_card(title: str, fields: Dict[str, Any], border_style: str = "cyan") -> None:
     """Display information in a boxed card format."""
-    grid = Table.grid(padding=(0, 2))
-    grid.add_column(style="bold cyan", justify="right")
-    grid.add_column(style="white")
+    band = _ui_width()
+    label_width = min(28, max((len(str(k)) for k in fields), default=8) + 1)
+    grid = Table.grid(padding=(0, 2), expand=True)
+    grid.add_column(style="bold cyan", justify="right", width=label_width, no_wrap=True)
+    grid.add_column(style="white", overflow="fold")
 
     for key, val in fields.items():
         val_str = str(val) if val is not None else "-"
         grid.add_row(f"{key}:", val_str)
 
-    panel = Panel(grid, title=f"[bold]{title}[/bold]", border_style=border_style, box=box.ROUNDED)
-    console.print(panel)
+    panel = Panel(
+        grid,
+        title=f"[bold]{title}[/bold]",
+        border_style=border_style,
+        box=box.ROUNDED,
+        width=band,
+        expand=True,
+        padding=(0, 1),
+    )
+    _print_centered(panel, width=band)
+
+
+def render_notice(
+    title: str,
+    lines: List[str],
+    border_style: str = "yellow",
+    width: Optional[int] = None,
+) -> None:
+    """Display a multi-line notice panel (replaces fixed-width ASCII banners)."""
+    band = _ui_width(width)
+    body = Text()
+    for i, line in enumerate(lines):
+        if i:
+            body.append("\n")
+        body.append(line)
+
+    panel = Panel(
+        body,
+        title=f"[bold]{title}[/bold]",
+        border_style=border_style,
+        box=box.ROUNDED,
+        padding=(0, 2),
+        width=band,
+        expand=True,
+    )
+    console.print()
+    _print_centered(panel, width=band)
 
 
 def render_dashboard(
@@ -196,8 +267,16 @@ def render_dashboard(
     Render the executive hospital dashboard using Rich Panels and Columns.
     Guarantees actual SQLite values with clean empty states.
     """
+    width = _ui_width()
     console.print()
-    console.rule("[bold cyan] PHILIPPINE HOSPITAL EXECUTIVE DASHBOARD [/bold cyan]", style="cyan")
+    _print_centered(Panel(
+        Text(" PHILIPPINE HOSPITAL EXECUTIVE DASHBOARD ", style="bold cyan", justify="center"),
+        border_style="cyan",
+        box=box.ROUNDED,
+        padding=(0, 1),
+        width=width,
+        expand=True,
+    ), width=width)
 
     # Card 1: Patient Registry
     p_text = Text()
@@ -231,7 +310,12 @@ def render_dashboard(
     f_text.append(f"{unpaid_bills_count}", style="yellow" if unpaid_bills_count > 0 else "green")
     card_fin = Panel(f_text, title="[bold green]💰 Financial Overview[/bold green]", border_style="green", box=box.ROUNDED)
 
-    console.print(Columns([card_patients, card_ops, card_fin], equal=True))
+    columns = Columns([card_patients, card_ops, card_fin], equal=True, expand=True)
+    # Cap and center only on wide terminals; avoid Columns(width=...) which crashes in Rich
+    if (console.width or CONTENT_MAX) > CONTENT_MAX:
+        _print_centered(Constrain(columns, width=width), width=width)
+    else:
+        console.print(columns)
     console.print()
 
 

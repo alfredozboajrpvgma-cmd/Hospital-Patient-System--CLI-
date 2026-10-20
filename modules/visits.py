@@ -14,8 +14,10 @@ from utils.display import (
     print_warning,
     print_info,
     print_table,
+    render_card,
+    render_notice,
     confirm_action,
-    pause
+    pause,
 )
 from utils.validators import (
     validate_non_empty,
@@ -155,12 +157,15 @@ def handle_emergency_visit(
     from modules.queue import issue_queue_ticket, close_patient_active_queue_ticket
     from utils.prompts import select_option, select_menu, confirm_prompt
 
+    render_notice(
+        "🚨 EMERGENCY ROOM (ER) CLINICAL INTAKE",
+        [
+            "NO APPOINTMENT NEEDED — acute emergencies are prioritized immediately.",
+            "Ordinary appointment scheduling is bypassed for acute Emergency Room care.",
+        ],
+        border_style="red",
+    )
     print()
-    print("=" * 72)
-    print("   🚨 EMERGENCY ROOM (ER) CLINICAL INTAKE — NO APPOINTMENT NEEDED")
-    print("=" * 72)
-    print_info("EMERGENCY CLINICAL PROTOCOL: Acute emergencies are prioritized immediately!")
-    print_info("Ordinary appointment scheduling is bypassed for acute Emergency Room care.\n")
 
     patient = preselected_patient
     if not patient:
@@ -265,17 +270,22 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
         triage_id = None
         if triage:
             triage_id = triage["triage_id"]
-            print("\n" + "=" * 65)
-            print("         🏥 PRE-CONSULTATION NURSING TRIAGE REVIEW")
-            print("=" * 65)
-            print(f"  Triage Record:   {triage['triage_id']} ({triage['triage_date']})")
-            print(f"  Triage Nurse:    {triage['nurse_user']}")
-            print(f"  Chief Complaint: {triage['chief_complaint']}")
-            print(f"  ALLERGIES:       {triage['allergies']}")
-            print(f"  Vital Signs:     Temp: {triage['temperature']}°C | BP: {triage['bp_systolic']}/{triage['bp_diastolic']} | HR: {triage['pulse_rate']} bpm | SpO2: {triage['oxygen_saturation']}% | Pain: {triage['pain_score']}/10")
+            triage_fields = {
+                "Triage Record": f"{triage['triage_id']} ({triage['triage_date']})",
+                "Triage Nurse": triage["nurse_user"],
+                "Chief Complaint": triage["chief_complaint"],
+                "Allergies": triage["allergies"],
+                "Vital Signs": (
+                    f"Temp: {triage['temperature']}°C | "
+                    f"BP: {triage['bp_systolic']}/{triage['bp_diastolic']} | "
+                    f"HR: {triage['pulse_rate']} bpm | "
+                    f"SpO2: {triage['oxygen_saturation']}% | "
+                    f"Pain: {triage['pain_score']}/10"
+                ),
+            }
             if triage["clinical_alerts"] and triage["clinical_alerts"] != "None":
-                print(f"  ⚠️  CLINICAL ALERTS: {triage['clinical_alerts']}")
-            print("=" * 65)
+                triage_fields["⚠️ Clinical Alerts"] = triage["clinical_alerts"]
+            render_card("🏥 PRE-CONSULTATION NURSING TRIAGE REVIEW", triage_fields, border_style="yellow")
         else:
             print()
             print_warning("⚠️  CLINICAL ADVISORY: No nursing triage assessment or vital signs recorded for this patient.")
@@ -285,7 +295,7 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import VisitCreateModel, format_pydantic_error
-        from pydantic import ValidationError
+        from utils.schema import ValidationError
 
         clinic_depts = [d for d in DEPARTMENTS if d != "Emergency Room (ER)"]
         department = select_option("Select Clinical Department / Clinic:", clinic_depts) or "Outpatient Department (OPD)"

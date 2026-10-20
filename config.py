@@ -14,7 +14,7 @@ else:
     BASE_DIR = Path(__file__).resolve().parent
 
 # Where the SQLite database file is stored
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = Path(os.environ.get("HOSPITAL_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
 DATABASE_PATH = DATA_DIR / "hospital.db"
 
 # Currency settings for the Philippines

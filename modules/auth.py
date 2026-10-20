@@ -294,7 +294,7 @@ def handle_user_management(conn: sqlite3.Connection) -> None:
     from utils.prompts import select_menu, select_option, confirm_prompt
     from utils.display import render_card
     from utils.validators import StaffUserCreateModel, format_pydantic_error
-    from pydantic import ValidationError
+    from utils.schema import ValidationError
 
     session = get_current_session()
     if not session or session.role != "Administrator":

@@ -14,6 +14,7 @@ from utils.display import (
     print_warning,
     print_info,
     print_table,
+    render_card,
     confirm_action,
     pause
 )
@@ -339,28 +340,27 @@ def handle_record_triage(
         # Evaluate screening criteria
         alerts, suggested_cat = evaluate_vital_signs(temp, bp_sys, bp_dia, pulse, resp, spo2, pain)
 
-        print("\n" + "=" * 60)
-        print("          TRIAGE ASSESSMENT CLINICAL SCREENING")
-        print("=" * 60)
-        print(f"  Patient:            {patient['full_name']} ({patient['patient_id']})")
-        print(f"  Chief Complaint:    {complaint}")
-        print(f"  Allergies:          {allergies}")
-        print(f"  Vital Signs:        T: {temp:.1f}°C | BP: {bp_sys}/{bp_dia} | HR: {pulse} bpm | RR: {resp} | SpO2: {spo2}% | Pain: {pain}/10")
-        print(f"  Suggested Category: {suggested_cat}")
-
+        screening_fields = {
+            "Patient": f"{patient['full_name']} ({patient['patient_id']})",
+            "Chief Complaint": complaint,
+            "Allergies": allergies,
+            "Vital Signs": (
+                f"T: {temp:.1f}°C | BP: {bp_sys}/{bp_dia} | "
+                f"HR: {pulse} bpm | RR: {resp} | SpO2: {spo2}% | Pain: {pain}/10"
+            ),
+            "Suggested Category": suggested_cat,
+        }
         if alerts:
-            print("\n  ⚠️  PHYSIOLOGICAL ALERT FLAGS DETECTED:")
-            for a in alerts:
-                print(f"     [FLAG] {a}")
+            screening_fields["⚠️ Physiological Alerts"] = "; ".join(alerts)
         else:
-            print("\n  [INFO] All recorded vital signs are within normal reference ranges.")
-        print("=" * 60)
+            screening_fields["Alert Status"] = "All vital signs within normal reference ranges."
+        render_card("TRIAGE ASSESSMENT CLINICAL SCREENING", screening_fields, border_style="yellow")
 
         # Allow nurse to confirm or adjust triage urgency via Questionary
         from utils.prompts import select_option, select_menu, confirm_prompt
         from utils.display import render_card
         from utils.validators import TriageCreateModel, format_pydantic_error
-        from pydantic import ValidationError
+        from utils.schema import ValidationError
 
         final_cat = select_option(
             f"Select Final Triage Urgency Category (Suggested: {suggested_cat}):",

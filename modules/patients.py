@@ -297,7 +297,7 @@ def handle_register_patient(conn: sqlite3.Connection) -> None:
                 patient_type=ptype_input
             )
         except Exception as exc:
-            from pydantic import ValidationError
+            from utils.schema import ValidationError
             if isinstance(exc, ValidationError):
                 print_error(format_pydantic_error(exc))
             else:

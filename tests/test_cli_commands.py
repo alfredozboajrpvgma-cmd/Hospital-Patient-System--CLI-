@@ -1,10 +1,28 @@
 """
-Automated unit tests for Typer CLI commands in cli.py.
+Automated unit tests for standard-library CLI commands in cli.py.
 Verifies argument parsing, exit codes, help messages, and output formatting.
 """
 
 import unittest
-from typer.testing import CliRunner
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+from contextlib import redirect_stdout, redirect_stderr
+from io import StringIO
+from types import SimpleNamespace
+
+
+class CliRunner:
+    def invoke(self, command, args):
+        output = StringIO()
+        code = 0
+        with redirect_stdout(output), redirect_stderr(output):
+            try:
+                command(args)
+            except SystemExit as exc:
+                code = exc.code or 0
+        return SimpleNamespace(exit_code=code, output=output.getvalue())
+
 
 from cli import app
 from database import get_connection, create_schema
@@ -12,11 +30,16 @@ from modules.patients import register_patient
 
 
 class TestCliCommands(unittest.TestCase):
-    """Test suite for Typer CLI commands."""
+    """Test suite for standard-library CLI commands."""
 
     def setUp(self):
         """Set up CLI test runner."""
         self.runner = CliRunner()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        database_path = patch("database.DATABASE_PATH", Path(self.temp_dir.name) / "hospital.db")
+        database_path.start()
+        self.addCleanup(database_path.stop)
 
     def test_cli_help(self):
         """Verify root help output displays available subcommands."""
