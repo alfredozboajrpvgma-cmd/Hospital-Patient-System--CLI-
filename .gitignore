@@ -16,4 +16,5 @@ data/
 # Virtual environments
 venv/
 .venv/
+.venv-rich-test/
 env/

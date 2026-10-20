@@ -40,10 +40,10 @@ This CLI system solves those problems using an organized SQLite database, input 
 - **Departments:** OPD, Emergency Room, Pediatrics, Internal Medicine, Surgery, OB-GYN, Cardiology, etc.
 
 ### Tech Stack
-- **Language:** Python 3 (standard library only)
+- **Language:** Python 3.8+
 - **Database:** SQLite 3 (built into Python via `sqlite3`)
-- **Testing:** Python's built-in `unittest` module (27 automated tests)
-- **Dependencies:** None! No `pip install` required.
+- **Testing:** Python's built-in `unittest` module (automated regression tests)
+- **Dependencies:** Rich 13.9.4 for colored tables and panels (`pip install -r requirements.txt`). No Pydantic or Pydantic Core.
 
 ---
 
@@ -300,4 +300,4 @@ Follow these steps during your live presentation so your demo goes smoothly:
 
 ## Portable Runtime Update
 
-Run the complete project in Pydroid 3 on Android, or Python 3.8+ with SQLite on desktop. No pip installations, Pydantic, or Pydantic Core are needed. Input schemas use `utils/schema.py`; CLI commands use `argparse`; basic consoles use `utils/plain_display.py`. Rich and Questionary remain optional enhancements. Back up `data/hospital.db` before updates. Physical Android and iOS testing has not been performed.
+Run the complete project in Pydroid 3 on Android, or Python 3.8+ with SQLite on desktop. Install Rich using `pip install -r requirements.txt`. Pydantic and Pydantic Core are not used. Input schemas use `utils/schema.py`; CLI commands use `argparse`; basic consoles use `utils/plain_display.py`. Rich provides the normal colored table interface; a plain fallback remains available. Questionary is optional. Back up `data/hospital.db` before updates. Physical Android and iOS testing has not been performed.

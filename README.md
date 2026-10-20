@@ -2,7 +2,7 @@
 
 A terminal-based hospital information system written in Python and SQLite for managing outpatient visits, emergency intake, nursing triage, doctor consultations, and cashier billing. Built as a college project for Batangas State University (BatStateU - TNEU).
 
-The application runs with Python's standard library only. Android users need **Pydroid 3**; no pip packages, Pydantic, or Pydantic Core are required. Numbered menus and wrapped text support basic terminals and phone consoles. Existing Rich and Questionary installations can optionally enhance the interface.
+The application uses **Rich** for colored, bordered tables, panels, status badges, and dashboards. Android users need **Pydroid 3** and the packages in `requirements.txt`. Validation uses Python's standard library: **no Pydantic or Pydantic Core**. Numbered menus work with touch keyboards; Questionary remains optional.
 
 ---
 
@@ -56,9 +56,9 @@ The system uses Role-Based Access Control (RBAC) with salted password hashing (P
 
 - Python 3.8+ with SQLite: Android (Pydroid 3), Windows, macOS, and Linux.
 - Standard-library validation, `argparse` subcommands, and SQLite storage.
-- Rich and Questionary are optional; the app works without them.
+- Install Rich for the full colored interface. If it is missing, a plain-text fallback keeps the system usable. Questionary is optional.
 - Pydroid 3 is an Android app. iPhone/iPad require a separate Python environment with SQLite and console input; this version has not been tested on iOS.
-- Physical Android device verification remains necessary; automated checks run on Windows without third-party packages.
+- Physical Android device verification remains necessary; automated checks run on Windows with Rich and also cover the package-free fallback.
 
 ## Project Structure
 
@@ -68,7 +68,7 @@ Hospital Patient System (CLI)/
 ├── cli.py                      # Standard-library argparse subcommands
 ├── database.py                 # SQLite schema, migrations, connection, and seed accounts
 ├── config.py                   # Constants, departments, vital sign ranges, and discount rates
-├── requirements.txt            # Documents that no pip packages are required
+├── requirements.txt            # Rich dependency for the colored interface
 ├── README.md                   # Project documentation
 ├── SYSTEM_DOCUMENTATION_AND_DEFENSE_GUIDE.md # Defense notes and technical explanation
 ├── data/
@@ -109,15 +109,20 @@ Hospital Patient System (CLI)/
 ### Android / Pydroid 3
 
 1. Copy or extract the **entire project folder** to a writable location on your device. Keep `modules/` and `utils/` beside `main.py`.
-2. Open `main.py` in Pydroid 3 and press Run.
-3. Enter menu numbers and press Enter. Log in using a demo account below.
-4. No pip installation or compiler is needed. The database is created at `data/hospital.db` beside the project.
+2. Open Pydroid 3 > Pip and install `rich==13.9.4`, or run `pip install -r requirements.txt` in its terminal.
+3. Open `main.py` and press Run (use terminal mode for ANSI colors).
+4. Enter menu numbers and press Enter. Log in using a demo account above.
+5. No Pydantic, Pydantic Core, or compiler is needed. The database is created at `data/hospital.db` beside the project.
 
 If Android denies storage access, move the project into a folder Pydroid can write to and grant its requested file access. Back up `data/hospital.db` before moving or updating the project. You may override the data directory using the `HOSPITAL_DATA_DIR` environment variable before launching Python.
 
 ### Desktop Requirements
 
-Python 3.8 or newer with SQLite. No external packages are required.
+Python 3.8 or newer with SQLite. Install the colored interface dependency:
+
+```sh
+python -m pip install -r requirements.txt
+```
 
 ### 2. Run the Interactive App
 Launch the main menu:
@@ -126,7 +131,7 @@ python main.py
 # or on Windows:
 py main.py
 ```
-Log in using one of the demo credentials (e.g. `admin` / `admin123` or `dr_smith` / `doc123`). Use the **Arrow Keys** to navigate and **Enter** to select options.
+Log in using one of the demo credentials (e.g. `admin` / `admin123` or `dr_smith` / `doc123`). Use menu numbers and Enter. Arrow keys are available if Questionary is installed.
 
 ### 3. Run CLI Subcommands (Optional)
 You can also run quick administrative lookups directly from your terminal:
@@ -189,3 +194,16 @@ OK
 
 *Created exclusively for a school project in Westmead International School.*
 
+
+### Colors and phone screens
+
+Wide screens show regular multi-column tables. Narrow screens show each record in a bordered Field/Value table so long names, departments, and amounts remain readable. Rich detects terminal color support automatically. If Pydroid does not detect colors, use its terminal and run:
+
+```python
+import os
+os.environ["HOSPITAL_COLOR"] = "always"
+from main import main
+main()
+```
+
+Set `HOSPITAL_COLOR=never` for monochrome output. See the [Rich console documentation](https://rich.readthedocs.io/en/stable/console.html) for terminal color behavior.

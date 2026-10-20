@@ -1,1 +1,3 @@
-# No external packages required. Run main.py with Python 3.8+ or Pydroid 3.
+# Colored tables and panels on Pydroid 3 and desktop Python 3.8+.
+# Pure-Python dependencies; no Pydantic or Pydantic Core.
+rich==13.9.4

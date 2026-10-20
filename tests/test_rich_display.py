@@ -7,6 +7,10 @@ import unittest
 from decimal import Decimal
 from io import StringIO
 import sys
+import os
+from unittest.mock import patch
+
+from utils import display
 
 from utils.display import (
     print_header,
@@ -24,6 +28,38 @@ from utils.display import (
 
 class TestRichDisplay(unittest.TestCase):
     """Test suite for Rich formatting utilities."""
+
+    @unittest.skipUnless(display.RICH_AVAILABLE, "Rich is not installed")
+    def test_colored_tables_at_phone_and_desktop_widths(self):
+        from rich.console import Console
+        from rich.text import Text
+        for width in (32, 48, 100):
+            with self.subTest(width=width):
+                output = StringIO()
+                with patch.dict(os.environ, {"TERM": "xterm"}):
+                    terminal = Console(file=output, width=width, height=40, force_terminal=True,
+                                       color_system="standard", legacy_windows=False)
+                with patch.object(display, "console", terminal):
+                    print_table(["Patient ID", "Name", "Status"],
+                                [["PAT-1001", "Maria Santos", "Active"]])
+                rendered = output.getvalue()
+                self.assertIn("\x1b[", rendered)
+                decoded = Text.from_ansi(rendered).plain
+                self.assertIn("Maria Santos", decoded)
+                self.assertIn("PAT-1001", decoded)
+                self.assertIn("│", decoded)
+                self.assertTrue(all(len(line) <= width for line in decoded.splitlines()))
+
+    @unittest.skipUnless(display.RICH_AVAILABLE, "Rich is not installed")
+    def test_phone_table_keeps_all_columns(self):
+        from rich.console import Console
+        output = StringIO()
+        terminal = Console(file=output, width=40, height=40, legacy_windows=False)
+        with patch.object(display, "console", terminal):
+            print_table(["Patient ID", "Full Name", "Department", "Status"],
+                        [["PAT-1001", "Maria Santos", "Cardiology", "Active"]])
+        for value in ("Field", "Value", "Cardiology", "Active", "PAT-1001"):
+            self.assertIn(value, output.getvalue())
 
     def test_semantic_status_styling(self):
         """Verify semantic badge markup is added to status columns."""

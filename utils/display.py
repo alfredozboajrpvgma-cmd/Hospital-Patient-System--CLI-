@@ -6,6 +6,7 @@ Provides colored banners, tables, alert badges, and summary cards.
 from typing import List, Any, Optional, Dict
 from decimal import Decimal
 import sys
+import os
 
 try:
     from rich.console import Console
@@ -16,8 +17,10 @@ try:
     from rich.columns import Columns
     from rich.padding import Padding
     from rich.constrain import Constrain
+    RICH_AVAILABLE = True
 except ImportError:
     from utils.plain_display import Console, Table, Panel, Text, box, Columns, Padding, Constrain
+    RICH_AVAILABLE = False
 
 # Make sure Windows terminal displays the Philippine Peso symbol (₱) correctly
 if hasattr(sys.stdout, "reconfigure"):
@@ -28,7 +31,15 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 # Rich Console used for all colored terminal printing
-console = Console(highlight=False)
+_color_mode = os.environ.get("HOSPITAL_COLOR", "auto").lower()
+if _color_mode == "always" and os.environ.get("TERM", "dumb") in ("dumb", "unknown"):
+    os.environ["TERM"] = "xterm"
+console = Console(
+    highlight=False,
+    force_terminal=True if _color_mode == "always" else None,
+    no_color=_color_mode == "never",
+    color_system="standard" if _color_mode == "always" else "auto",
+)
 
 # Cap content width so large terminals stay readable and centered
 CONTENT_MAX = 100
@@ -146,6 +157,24 @@ def print_table(
 ) -> None:
     """Print records in a clean table with borders and colored statuses."""
     width = _ui_width()
+    # Phone screens cannot fit all registry columns horizontally. Keep borders
+    # and colors, but show each record in a two-column field/value table.
+    if RICH_AVAILABLE and rows and width < max(60, len(headers) * 12):
+        for number, row in enumerate(rows, 1):
+            compact = Table(
+                title=f"{title or 'Records'} ({number}/{len(rows)})",
+                box=box.ROUNDED, border_style="bright_blue", width=width,
+                show_header=True, header_style="bold cyan", show_lines=True,
+            )
+            compact.add_column("Field", style="cyan", ratio=1, overflow="fold")
+            compact.add_column("Value", ratio=2, overflow="fold")
+            for index, header in enumerate(headers):
+                value = row[index] if index < len(row) else ""
+                value = str(value) if value is not None else ""
+                compact.add_row(Text(header), Text.from_markup(_style_cell_content(header, value)))
+            _print_centered(compact, width=width)
+        _print_centered(Text(f"Total records: {len(rows)}", style="dim"), width=width)
+        return
     if not rows:
         console.print()
         _print_centered(Panel(
@@ -204,9 +233,9 @@ def print_table(
 def render_card(title: str, fields: Dict[str, Any], border_style: str = "cyan") -> None:
     """Display information in a boxed card format."""
     band = _ui_width()
-    label_width = min(28, max((len(str(k)) for k in fields), default=8) + 1)
+    label_width = min(28, max(6, band // 3), max((len(str(k)) for k in fields), default=8) + 1)
     grid = Table.grid(padding=(0, 2), expand=True)
-    grid.add_column(style="bold cyan", justify="right", width=label_width, no_wrap=True)
+    grid.add_column(style="bold cyan", justify="right", width=label_width, overflow="fold")
     grid.add_column(style="white", overflow="fold")
 
     for key, val in fields.items():
