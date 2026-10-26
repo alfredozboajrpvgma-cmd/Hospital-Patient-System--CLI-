@@ -30,9 +30,9 @@ from modules.audit import log_audit_event
 from modules.auth import get_current_session
 
 
-# ==========================================
-# Database Operations
-# ==========================================
+
+
+
 
 def generate_patient_id(conn: sqlite3.Connection) -> str:
     """Generate the next patient ID like PAT-1001 by finding the highest ID and adding 1."""
@@ -69,7 +69,7 @@ def register_patient(
     reg_date = registration_date or date.today().strftime(DATE_FORMAT)
 
     cursor = conn.cursor()
-    # Check if patient_type column exists in this database
+
     cursor.execute("PRAGMA table_info(patients)")
     cols = [r[1] for r in cursor.fetchall()]
 
@@ -95,7 +95,7 @@ def register_patient(
         ))
     conn.commit()
 
-    # Log audit event
+
     session = get_current_session()
     uid = session.user_id if session else "SYSTEM"
     uname = session.username if session else "system"
@@ -175,7 +175,7 @@ def update_patient(
     updates = []
     values = []
 
-    # Only update fields that exist in the database and have a value
+
     for key, value in fields.items():
         if key in allowed_fields and value is not None:
             updates.append(f"{key} = ?")
@@ -232,9 +232,9 @@ def reactivate_patient(conn: sqlite3.Connection, patient_id: str) -> bool:
     return success
 
 
-# ==========================================
-# CLI Submenu and Handlers
-# ==========================================
+
+
+
 
 def handle_register_patient(conn: sqlite3.Connection) -> None:
     """Ask for patient details, validate with Pydantic, and save to database."""
@@ -246,46 +246,46 @@ def handle_register_patient(conn: sqlite3.Connection) -> None:
     print("Leave input blank or press Ctrl+C to cancel at any prompt.\n")
 
     try:
-        # Full Name
+
         name_input = input("Enter Full Name: ").strip()
         if not name_input:
             print_warning("Registration cancelled.")
             return
 
-        # Date of Birth
+
         dob_input = input("Enter Date of Birth (YYYY-MM-DD): ").strip()
         if not dob_input:
             print_warning("Registration cancelled.")
             return
 
-        # Sex (Interactive Selection)
+
         sex_input = select_option("Select Sex:", ["Male", "Female", "Other"])
         if not sex_input:
             print_warning("Registration cancelled.")
             return
 
-        # Contact Number
+
         contact_input = input("Enter Contact Number (e.g. 09171234567 or +639171234567): ").strip()
         if not contact_input:
             print_warning("Registration cancelled.")
             return
 
-        # Address
+
         address_input = input("Enter Address (Street/Subdivision, Brgy, City/Municipality, Province): ").strip()
         if not address_input:
             print_warning("Registration cancelled.")
             return
 
-        # Emergency Contact
+
         emerg_input = input("Enter Emergency Contact (Full Name & Contact No.): ").strip()
         if not emerg_input:
             print_warning("Registration cancelled.")
             return
 
-        # Patient Type
+
         ptype_input = select_option("Select Patient Classification:", PATIENT_TYPES) or "Outpatient"
 
-        # Validate with Pydantic
+
         try:
             validated = PatientCreateModel(
                 full_name=name_input,
@@ -297,7 +297,7 @@ def handle_register_patient(conn: sqlite3.Connection) -> None:
                 patient_type=ptype_input
             )
         except Exception as exc:
-            from pydantic import ValidationError
+            from utils.schema import ValidationError
             if isinstance(exc, ValidationError):
                 print_error(format_pydantic_error(exc))
             else:
@@ -305,7 +305,7 @@ def handle_register_patient(conn: sqlite3.Connection) -> None:
             pause()
             return
 
-        # Warn if this person might already be in the database
+
         duplicate = check_potential_duplicate(conn, validated.full_name, validated.dob, validated.contact_number)
         if duplicate:
             print_warning(f"An existing patient record ({duplicate['patient_id']}) matches this Name, DOB, and Phone!")
@@ -313,7 +313,7 @@ def handle_register_patient(conn: sqlite3.Connection) -> None:
                 print_info("Registration aborted.")
                 return
 
-        # Show Rich summary card before saving
+
         render_card("NEW PATIENT REGISTRATION SUMMARY", {
             "Full Name": validated.full_name,
             "Date of Birth": validated.dob,
@@ -429,7 +429,7 @@ def handle_update_patient(conn: sqlite3.Connection) -> None:
         pause()
         return
 
-    # If archived, offer to reactivate before editing
+
     if patient["status"] == "Archived":
         print_warning("This patient record is currently ARCHIVED.")
         if confirm_action("Would you like to reactivate this patient first?", default_no=True):
@@ -446,7 +446,7 @@ def handle_update_patient(conn: sqlite3.Connection) -> None:
     updated_fields: Dict[str, Any] = {}
 
     try:
-        # Full Name
+
         new_name = input(f"Full Name [{patient['full_name']}]: ").strip()
         if new_name:
             val, res = validate_non_empty(new_name, "Full Name", min_length=2)
@@ -455,7 +455,7 @@ def handle_update_patient(conn: sqlite3.Connection) -> None:
             else:
                 print_error(f"Keeping existing name due to error: {res}")
 
-        # Date of Birth
+
         new_dob = input(f"Date of Birth [{patient['dob']}]: ").strip()
         if new_dob:
             val, res = validate_date(new_dob, allow_future=False, allow_past=True, field_name="DOB")
@@ -464,7 +464,7 @@ def handle_update_patient(conn: sqlite3.Connection) -> None:
             else:
                 print_error(f"Keeping existing DOB due to error: {res}")
 
-        # Sex
+
         new_sex = input(f"Sex [{patient['sex']}]: ").strip()
         if new_sex:
             val, res = validate_sex(new_sex)
@@ -473,7 +473,7 @@ def handle_update_patient(conn: sqlite3.Connection) -> None:
             else:
                 print_error(f"Keeping existing sex due to error: {res}")
 
-        # Contact Number
+
         new_phone = input(f"Contact Number [{patient['contact_number']}]: ").strip()
         if new_phone:
             val, res = validate_phone(new_phone, "Contact number")
@@ -482,7 +482,7 @@ def handle_update_patient(conn: sqlite3.Connection) -> None:
             else:
                 print_error(f"Keeping existing contact due to error: {res}")
 
-        # Address
+
         new_addr = input(f"Address [{patient['address']}]: ").strip()
         if new_addr:
             val, res = validate_non_empty(new_addr, "Address", min_length=3)
@@ -491,7 +491,7 @@ def handle_update_patient(conn: sqlite3.Connection) -> None:
             else:
                 print_error(f"Keeping existing address due to error: {res}")
 
-        # Emergency Contact
+
         new_emerg = input(f"Emergency Contact [{patient['emergency_contact']}]: ").strip()
         if new_emerg:
             val, res = validate_non_empty(new_emerg, "Emergency contact", min_length=3)

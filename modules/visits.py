@@ -14,8 +14,10 @@ from utils.display import (
     print_warning,
     print_info,
     print_table,
+    render_card,
+    render_notice,
     confirm_action,
-    pause
+    pause,
 )
 from utils.validators import (
     validate_non_empty,
@@ -28,9 +30,9 @@ from modules.auth import get_current_session
 from modules.triage import get_latest_triage_for_patient, record_triage, evaluate_vital_signs
 
 
-# ==========================================
-# Database Operations
-# ==========================================
+
+
+
 
 def generate_visit_id(conn: sqlite3.Connection) -> str:
     """Generate the next visit ID like VST-1001, VST-1002."""
@@ -38,7 +40,7 @@ def generate_visit_id(conn: sqlite3.Connection) -> str:
     cursor.execute("SELECT visit_id FROM visits WHERE visit_id LIKE 'VST-%' ORDER BY visit_id DESC")
     rows = cursor.fetchall()
 
-    # Find the highest existing visit number and add 1
+
     max_id_num = 1000
     for row in rows:
         vid = row["visit_id"]
@@ -70,7 +72,7 @@ def record_visit(
     visit_id = generate_visit_id(conn)
     cursor = conn.cursor()
 
-    # Check if structured SOAP columns exist in this database
+
     cursor.execute("PRAGMA table_info(visits)")
     cols = [r[1] for r in cursor.fetchall()]
 
@@ -140,9 +142,9 @@ def get_all_visits(conn: sqlite3.Connection) -> List[sqlite3.Row]:
     return cursor.fetchall()
 
 
-# ==========================================
-# CLI Submenu and Handlers
-# ==========================================
+
+
+
 
 def handle_emergency_visit(
     conn: sqlite3.Connection,
@@ -155,12 +157,15 @@ def handle_emergency_visit(
     from modules.queue import issue_queue_ticket, close_patient_active_queue_ticket
     from utils.prompts import select_option, select_menu, confirm_prompt
 
+    render_notice(
+        "🚨 EMERGENCY ROOM (ER) CLINICAL INTAKE",
+        [
+            "NO APPOINTMENT NEEDED — acute emergencies are prioritized immediately.",
+            "Ordinary appointment scheduling is bypassed for acute Emergency Room care.",
+        ],
+        border_style="red",
+    )
     print()
-    print("=" * 72)
-    print("   🚨 EMERGENCY ROOM (ER) CLINICAL INTAKE — NO APPOINTMENT NEEDED")
-    print("=" * 72)
-    print_info("EMERGENCY CLINICAL PROTOCOL: Acute emergencies are prioritized immediately!")
-    print_info("Ordinary appointment scheduling is bypassed for acute Emergency Room care.\n")
 
     patient = preselected_patient
     if not patient:
@@ -194,7 +199,7 @@ def handle_emergency_visit(
                 print_warning("Emergency intake cancelled.")
                 return None
 
-    # Issue priority emergency queue ticket so the patient is visible on the board
+
     tid, q_num = issue_queue_ticket(conn, patient["patient_id"], "Emergency Room (ER)", ticket_type="Emergency")
     print_info(f"🚨 Priority ER Queue Ticket #{q_num} issued ({tid}) with Emergency Prioritization.")
 
@@ -204,7 +209,7 @@ def handle_emergency_visit(
     print(f"  Department: {department}")
     print(f"  Timestamp:  {visit_date} (Immediate Assessment)")
 
-    # Use authenticated doctor account as attending physician
+
     session = get_current_session()
     if session and session.role == "Doctor":
         provider = session.full_name
@@ -219,7 +224,7 @@ def handle_emergency_visit(
             provider = session.full_name if session else "Dr. ER Duty Physician"
         print_info(f"  Attending Physician: {provider}")
 
-    # Record emergency clinical notes and treatment given
+
     if default_notes:
         print(f"\nReported Chief Complaint / Condition: {default_notes}")
         extra = input("Document Emergency Treatment / Interventions Administered: ").strip()
@@ -260,22 +265,27 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
             pause()
             return
 
-        # Check if patient already had their vitals taken by a nurse
+
         triage = get_latest_triage_for_patient(conn, patient["patient_id"])
         triage_id = None
         if triage:
             triage_id = triage["triage_id"]
-            print("\n" + "=" * 65)
-            print("         🏥 PRE-CONSULTATION NURSING TRIAGE REVIEW")
-            print("=" * 65)
-            print(f"  Triage Record:   {triage['triage_id']} ({triage['triage_date']})")
-            print(f"  Triage Nurse:    {triage['nurse_user']}")
-            print(f"  Chief Complaint: {triage['chief_complaint']}")
-            print(f"  ALLERGIES:       {triage['allergies']}")
-            print(f"  Vital Signs:     Temp: {triage['temperature']}°C | BP: {triage['bp_systolic']}/{triage['bp_diastolic']} | HR: {triage['pulse_rate']} bpm | SpO2: {triage['oxygen_saturation']}% | Pain: {triage['pain_score']}/10")
+            triage_fields = {
+                "Triage Record": f"{triage['triage_id']} ({triage['triage_date']})",
+                "Triage Nurse": triage["nurse_user"],
+                "Chief Complaint": triage["chief_complaint"],
+                "Allergies": triage["allergies"],
+                "Vital Signs": (
+                    f"Temp: {triage['temperature']}°C | "
+                    f"BP: {triage['bp_systolic']}/{triage['bp_diastolic']} | "
+                    f"HR: {triage['pulse_rate']} bpm | "
+                    f"SpO2: {triage['oxygen_saturation']}% | "
+                    f"Pain: {triage['pain_score']}/10"
+                ),
+            }
             if triage["clinical_alerts"] and triage["clinical_alerts"] != "None":
-                print(f"  ⚠️  CLINICAL ALERTS: {triage['clinical_alerts']}")
-            print("=" * 65)
+                triage_fields["⚠️ Clinical Alerts"] = triage["clinical_alerts"]
+            render_card("🏥 PRE-CONSULTATION NURSING TRIAGE REVIEW", triage_fields, border_style="yellow")
         else:
             print()
             print_warning("⚠️  CLINICAL ADVISORY: No nursing triage assessment or vital signs recorded for this patient.")
@@ -285,12 +295,12 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
         from utils.prompts import select_option, confirm_prompt
         from utils.display import render_card
         from utils.validators import VisitCreateModel, format_pydantic_error
-        from pydantic import ValidationError
+        from utils.schema import ValidationError
 
         clinic_depts = [d for d in DEPARTMENTS if d != "Emergency Room (ER)"]
         department = select_option("Select Clinical Department / Clinic:", clinic_depts) or "Outpatient Department (OPD)"
 
-        # Attending doctor is automatically set to the logged-in doctor account
+
         session = get_current_session()
         reassign_note = ""
         if session and session.role == "Doctor":
@@ -324,10 +334,10 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
                 attending_provider = session.full_name if session else "Dr. Attending Physician"
                 print_info(f"Attending Physician: {attending_provider}")
 
-        # Collect SOAP consultation notes step by step
+
         print("\nClinical Consultation Documentation (SOAP Format):")
 
-        # 1. Subjective / Chief Complaint (Mandatory)
+
         while True:
             default_cc = triage["chief_complaint"] if triage else ""
             if default_cc:
@@ -341,7 +351,7 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
                 break
             print_error("Chief complaint is mandatory and cannot be empty.")
 
-        # 2. Objective / Physical Findings (Distinguish missing from confirmed normal)
+
         while True:
             findings_in = input("  2. Objective Physical Findings & Observations (or 'normal' if none): ").strip()
             if findings_in.lower() in ("normal", "unremarkable", "none", "nil", "no abnormal findings"):
@@ -354,7 +364,7 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
             else:
                 print_error("Documentation required: Document physical examination findings or explicitly confirm normal/unremarkable.")
 
-        # 3. Assessment / Clinical Diagnosis (Mandatory clinician assessment)
+
         while True:
             diag_in = input("  3. Assessment / Clinical Diagnosis (Required): ").strip()
             if len(diag_in) >= 2:
@@ -362,7 +372,7 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
                 break
             print_error("Clinical diagnosis cannot be empty. Must be documented by the attending clinician.")
 
-        # 4. Plan / Treatment Orders (Mandatory clinician instructions)
+
         while True:
             plan_in = input("  4. Treatment Plan / Prescriptions / Follow-up Orders: ").strip()
             if len(plan_in) >= 2:
@@ -374,10 +384,10 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
             else:
                 print_error("Treatment plan is mandatory and must reflect the clinician's documented instructions.")
 
-        # Full notes for persistence and audit
+
         notes = f"CC: {chief_complaint}. Findings: {clinical_findings}. Dx: {diagnosis}. Plan: {treatment_plan}{reassign_note}"
 
-        # Validate consultation details before saving
+
         try:
             visit_model = VisitCreateModel(
                 patient_id=patient["patient_id"],
@@ -396,7 +406,7 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
             pause()
             return
 
-        # Show summary card before saving
+
         render_card("CLINICAL CONSULTATION SUMMARY", {
             "Patient": f"{patient['full_name']} ({patient['patient_id']})",
             "Timestamp": visit_model.visit_date,
@@ -421,7 +431,7 @@ def handle_record_visit(conn: sqlite3.Connection) -> None:
                 diagnosis=visit_model.diagnosis,
                 treatment_plan=visit_model.treatment_plan
             )
-            # Move the patient's queue ticket from consultation to billing
+
             closed_tid = close_patient_active_queue_ticket(conn, patient["patient_id"], new_status="Billing")
             print_success(f"Consultation record logged successfully! Visit ID: {vid}")
             if closed_tid:
@@ -452,7 +462,7 @@ def handle_view_patient_visits(conn: sqlite3.Connection) -> None:
     visits = get_visits_by_patient(conn, patient["patient_id"])
     print_info(f"Visit history for {patient['full_name']} ({patient['patient_id']}):")
 
-    # Shorten long notes so the table stays neat on screen
+
     headers = ["Visit ID", "Date & Time", "Department", "Provider", "Notes"]
     rows = [
         [

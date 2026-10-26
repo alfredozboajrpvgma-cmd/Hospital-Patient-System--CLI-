@@ -1,5 +1,5 @@
 """
-Command-line subcommands using Typer.
+Command-line subcommands using argparse.
 Allows quick lookups, lists, and summary reports directly from the terminal.
 """
 
@@ -7,9 +7,7 @@ import sys
 import sqlite3
 from typing import Optional
 from datetime import date
-import typer
-from rich import box
-from rich.table import Table
+import argparse
 
 from database import init_db, get_connection
 from utils.display import (
@@ -26,28 +24,10 @@ from utils.display import (
 )
 from config import CURRENCY_SYMBOL, CURRENCY_CODE, DATE_FORMAT
 
-app = typer.Typer(
-    name="hospital",
-    help="Philippine Hospital Patient Management System CLI Commands.",
-    add_completion=False
-)
-
-patients_app = typer.Typer(name="patients", help="Manage and search hospital patient records.")
-appointments_app = typer.Typer(name="appointments", help="View and inspect outpatient appointments.")
-reports_app = typer.Typer(name="reports", help="Hospital statistical summaries and daily metrics.")
-database_app = typer.Typer(name="database", help="Hospital database maintenance and initialization.")
-
-app.add_typer(patients_app)
-app.add_typer(appointments_app)
-app.add_typer(reports_app)
-app.add_typer(database_app)
 
 
-# ==========================================
-# Database Commands
-# ==========================================
 
-@database_app.command("initialize")
+
 def cmd_database_initialize() -> None:
     """Set up the SQLite database and default demo accounts."""
     try:
@@ -55,16 +35,15 @@ def cmd_database_initialize() -> None:
         print_success("Hospital SQLite database schema and seed users initialized successfully.")
     except Exception as exc:
         print_error(f"Failed to initialize database: {exc}")
-        raise typer.Exit(code=1)
+        raise SystemExit(1)
 
 
-# ==========================================
-# Patient Commands
-# ==========================================
 
-@patients_app.command("list")
+
+
+
 def cmd_patients_list(
-    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status: 'Active' or 'Archived'")
+    status: Optional[str] = None
 ) -> None:
     """List hospital patients, with optional status filter."""
     from modules.patients import get_all_patients
@@ -82,9 +61,8 @@ def cmd_patients_list(
         conn.close()
 
 
-@patients_app.command("search")
 def cmd_patients_search(
-    query: str = typer.Argument(..., help="Patient ID or partial name to search")
+    query: str = None
 ) -> None:
     """Search for patients by full name or ID."""
     from modules.patients import search_patients
@@ -94,7 +72,7 @@ def cmd_patients_search(
         results = search_patients(conn, query)
         if not results:
             print_warning(f"No patients found matching '{query}'.")
-            raise typer.Exit(code=1)
+            raise SystemExit(1)
 
         headers = ["Patient ID", "Full Name", "DOB", "Sex", "Contact", "Status"]
         rows = [
@@ -106,9 +84,8 @@ def cmd_patients_search(
         conn.close()
 
 
-@patients_app.command("view")
 def cmd_patients_view(
-    patient_id: str = typer.Argument(..., help="Patient ID (e.g. PAT-1001)")
+    patient_id: str = None
 ) -> None:
     """View complete profile of a patient by ID."""
     from modules.patients import get_patient_by_id
@@ -118,7 +95,7 @@ def cmd_patients_view(
         patient = get_patient_by_id(conn, patient_id)
         if not patient:
             print_error(f"Patient with ID '{patient_id}' not found.")
-            raise typer.Exit(code=1)
+            raise SystemExit(1)
 
         pt_keys = patient.keys()
         pt_type = patient["patient_type"] if "patient_type" in pt_keys else "Outpatient"
@@ -138,13 +115,12 @@ def cmd_patients_view(
         conn.close()
 
 
-# ==========================================
-# Appointment Commands
-# ==========================================
 
-@appointments_app.command("list")
+
+
+
 def cmd_appointments_list(
-    target_date: Optional[str] = typer.Option(None, "--date", "-d", help="Filter by date (YYYY-MM-DD)")
+    target_date: Optional[str] = None
 ) -> None:
     """List scheduled appointments."""
     conn = get_connection()
@@ -165,7 +141,7 @@ def cmd_appointments_list(
                        a.appointment_date, a.appointment_time, a.department, a.status
                 FROM appointments a
                 JOIN patients p ON a.patient_id = p.patient_id
-                WHERE a.appointment_date >= date('now')
+                WHERE a.appointment_date >= date('now', 'localtime')
                 ORDER BY a.appointment_date ASC, a.appointment_time ASC;
             """)
         appointments = cursor.fetchall()
@@ -189,11 +165,10 @@ def cmd_appointments_list(
         conn.close()
 
 
-# ==========================================
-# Report Commands
-# ==========================================
 
-@reports_app.command("daily")
+
+
+
 def cmd_reports_daily() -> None:
     """Show daily patient intake registrations and operational metrics."""
     conn = get_connection()
@@ -204,7 +179,6 @@ def cmd_reports_daily() -> None:
         conn.close()
 
 
-@reports_app.command("dashboard")
 def cmd_reports_dashboard() -> None:
     """Show the real-time hospital executive dashboard."""
     conn = get_connection()
@@ -219,20 +193,20 @@ def cmd_reports_dashboard() -> None:
         cursor = conn.cursor()
         cursor.execute("""
             SELECT COUNT(*) as count FROM appointments
-            WHERE appointment_date = date('now') AND status IN ('Scheduled', 'Rescheduled');
+            WHERE appointment_date = date('now', 'localtime') AND status IN ('Scheduled', 'Rescheduled');
         """)
         appts_today = cursor.fetchone()["count"]
 
         cursor.execute("""
             SELECT COUNT(*) as count FROM queue_tickets
-            WHERE ticket_date = date('now') AND status = 'Waiting';
+            WHERE ticket_date = date('now', 'localtime') AND status = 'Waiting';
         """)
         queue_waiting = cursor.fetchone()["count"]
 
         cursor.execute("SELECT COUNT(*) as count FROM visits WHERE visit_status = 'Completed';")
         v_total = cursor.fetchone()["count"]
 
-        cursor.execute("SELECT COUNT(*) as count FROM bills WHERE status != 'Paid';")
+        cursor.execute("SELECT COUNT(*) as count FROM bills WHERE status IN ('Unpaid', 'Partially Paid');")
         unpaid_bills_cnt = cursor.fetchone()["count"]
 
         render_dashboard(
@@ -250,15 +224,51 @@ def cmd_reports_dashboard() -> None:
         conn.close()
 
 
-@app.command("interactive")
 def cmd_interactive() -> None:
-    """Launch the full interactive Questionary & Rich hospital system."""
+    """Launch the full interactive hospital system."""
     from main import run_interactive_app
     run_interactive_app()
 
 
-def run_cli() -> None:
-    """CLI execution entrypoint."""
+def app(args=None):
+    """Parse portable CLI commands with the Python standard library."""
+    parser = argparse.ArgumentParser(description="Philippine Hospital Patient Management System CLI Commands.")
+    groups = parser.add_subparsers(dest="group", required=True)
+    commands = {}
+    for group, entries in {
+        "database": [("initialize", cmd_database_initialize)],
+        "patients": [("list", cmd_patients_list), ("search", cmd_patients_search), ("view", cmd_patients_view)],
+        "appointments": [("list", cmd_appointments_list)],
+        "reports": [("daily", cmd_reports_daily), ("dashboard", cmd_reports_dashboard)],
+    }.items():
+        sub = groups.add_parser(group).add_subparsers(dest="command", required=True)
+        for name, handler in entries:
+            command = sub.add_parser(name, help=handler.__doc__)
+            commands[(group, name)] = handler
+            if group == "patients" and name == "list":
+                command.add_argument("--status", "-s", choices=["Active", "Archived"])
+            elif group == "patients" and name == "search":
+                command.add_argument("query")
+            elif group == "patients" and name == "view":
+                command.add_argument("patient_id")
+            elif group == "appointments":
+                command.add_argument("--date", "-d", dest="target_date")
+    groups.add_parser("interactive", help="Launch the interactive hospital system.")
+    options = vars(parser.parse_args(args))
+    group = options.pop("group")
+    if group == "interactive":
+        return cmd_interactive()
+    command = options.pop("command")
+    try:
+        if group != "database":
+            init_db()
+        commands[(group, command)](**options)
+    except (sqlite3.Error, OSError, ValueError) as exc:
+        print_error(str(exc))
+        raise SystemExit(1)
+
+
+def run_cli():
     app()
 
 

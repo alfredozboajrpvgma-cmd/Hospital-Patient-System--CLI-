@@ -16,4 +16,10 @@ data/
 # Virtual environments
 venv/
 .venv/
+.venv-rich-test/
 env/
+
+# Local development files excluded from the Pydroid runtime branch
+tests/
+Hospital_Patient_System.spec
+SYSTEM_DOCUMENTATION_AND_DEFENSE_GUIDE.md

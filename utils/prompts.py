@@ -52,13 +52,14 @@ def select_menu(
         except (KeyboardInterrupt, EOFError):
             return None
         except Exception:
-            # If Questionary encounters an issue, fall back to numbered input
+
             pass
 
-    # Numbered fallback for standard terminals
+
     console.print(f"\n[bold cyan]{title}[/bold cyan]")
     for idx, opt in enumerate(choices, 1):
-        console.print(f"  {idx}. {opt}")
+        label = opt.split(". ", 1)[1] if opt.split(". ", 1)[0].isdigit() else opt
+        console.print(f"  {idx}. {label}")
     
     try:
         user_input = input(f"Enter choice (1-{len(choices)}, or 0 to cancel): ").strip()
@@ -66,7 +67,7 @@ def select_menu(
             return None
         if user_input.isdigit() and 1 <= int(user_input) <= len(choices):
             return choices[int(user_input) - 1]
-    except (KeyboardInterrupt, EOFError):
+    except KeyboardInterrupt:
         return None
 
     return None
@@ -161,7 +162,7 @@ def interactive_patient_lookup(
         if not query or query.lower() in ("0", "q", "cancel", "back", "exit"):
             return None
 
-        # 1. Exact ID match (e.g., PAT-1001 or 1001)
+
         patient = get_patient_by_id(conn, query)
         if not patient and query.isdigit():
             patient = get_patient_by_id(conn, f"PAT-{query}")
@@ -172,7 +173,7 @@ def interactive_patient_lookup(
                 continue
             return patient
 
-        # 2. Browse all
+
         if query.lower() in ("?", "list", "all"):
             all_pts = get_all_patients(conn, filter_status=None if include_archived else "Active")
             if not all_pts:
@@ -189,7 +190,7 @@ def interactive_patient_lookup(
             chosen_id = selected.split(" - ")[0].strip()
             return get_patient_by_id(conn, chosen_id)
 
-        # 3. Name search
+
         results = search_patients(conn, query)
         if not results:
             print_error(f"No patient found matching '{query}'. Enter 'list' to browse all, or try again.")
@@ -203,7 +204,7 @@ def interactive_patient_lookup(
             print_info(f"Selected: {chosen['full_name']} ({chosen['patient_id']})")
             return chosen
 
-        # Multiple matches: choose via interactive menu
+
         choices = [f"{p['patient_id']} - {p['full_name']} ({p['contact_number']}) [{p['status']}]" for p in results]
         choices.append("Cancel")
         selected = select_menu(f"Found {len(results)} matching patients. Choose one:", choices)

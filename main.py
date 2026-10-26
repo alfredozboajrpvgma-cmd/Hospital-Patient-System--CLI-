@@ -7,7 +7,7 @@ import sys
 import sqlite3
 from typing import List
 
-# Make sure Windows terminal displays the Philippine Peso symbol (₱) correctly
+
 if hasattr(sys.stdout, "reconfigure"):
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -168,7 +168,7 @@ def run_authenticated_session(conn: sqlite3.Connection) -> bool:
 
         choice_num = int(choice.split(".")[0])
 
-        # Route by Role
+
         if role == "Administrator":
             if choice_num == 1:
                 handle_emergency_visit(conn)
@@ -245,7 +245,7 @@ def run_interactive_app() -> None:
     try:
         init_db()
         conn = get_connection()
-    except sqlite3.Error as exc:
+    except (sqlite3.Error, OSError) as exc:
         print_error(f"Failed to initialize hospital database: {exc}")
         sys.exit(1)
 
@@ -257,7 +257,7 @@ def run_interactive_app() -> None:
 
     try:
         while True:
-            # Ask user to log in first
+
             session = get_current_session()
             if not session:
                 session = handle_login(conn)
@@ -265,11 +265,13 @@ def run_interactive_app() -> None:
                     print_info("Exiting Hospital Patient System. Goodbye!")
                     break
 
-            # Run menu for the logged-in user
+
             keep_running = run_authenticated_session(conn)
             if not keep_running:
                 print_info("Thank you for using the Hospital Patient Management System. Goodbye!")
                 break
+    except (EOFError, KeyboardInterrupt):
+        print_info("Hospital system closed.")
     finally:
         try:
             conn.close()

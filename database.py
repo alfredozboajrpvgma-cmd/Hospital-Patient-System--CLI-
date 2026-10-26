@@ -16,16 +16,16 @@ def get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
     """
     target_path = db_path if db_path is not None else str(DATABASE_PATH)
 
-    # Create the data folder if it does not exist yet
+
     if target_path != ":memory:":
         parent_dir = os.path.dirname(target_path)
         if parent_dir and not os.path.exists(parent_dir):
             os.makedirs(parent_dir, exist_ok=True)
 
     conn = sqlite3.connect(target_path, check_same_thread=False, timeout=10.0)
-    # SQLite turns off foreign keys by default, so we need to turn it on
+
     conn.execute("PRAGMA foreign_keys = ON;")
-    # Row factory lets us write row['column_name'] instead of index numbers
+
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -58,7 +58,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
     """
     cursor = conn.cursor()
 
-    # 1. Staff Users Table (Role-Based Access Control)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id TEXT PRIMARY KEY,
@@ -72,7 +72,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         );
     """)
 
-    # 2. Patients Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS patients (
             patient_id TEXT PRIMARY KEY,
@@ -86,14 +86,14 @@ def create_schema(conn: sqlite3.Connection) -> None:
             status TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Archived'))
         );
     """)
-    # Migration: Add patient_type if missing
+
     if not _column_exists(cursor, "patients", "patient_type"):
         try:
             cursor.execute("ALTER TABLE patients ADD COLUMN patient_type TEXT DEFAULT 'Outpatient';")
         except sqlite3.OperationalError:
             pass
 
-    # 3. Appointments Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS appointments (
             appointment_id TEXT PRIMARY KEY,
@@ -112,7 +112,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         except sqlite3.OperationalError:
             pass
 
-    # 4. Daily Queue & Walk-in Tickets Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS queue_tickets (
             ticket_id TEXT PRIMARY KEY,
@@ -127,7 +127,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         );
     """)
 
-    # 5. Nursing Assessment & Triage Vitals Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS triage_records (
             triage_id TEXT PRIMARY KEY,
@@ -150,7 +150,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         );
     """)
 
-    # 6. Clinical Visits & Doctor Consultations Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS visits (
             visit_id TEXT PRIMARY KEY,
@@ -162,7 +162,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
             FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON UPDATE CASCADE
         );
     """)
-    # Migration: Add structured clinical fields if missing
+
     for col, ctype, default in [
         ("triage_id", "TEXT", "NULL"),
         ("chief_complaint", "TEXT", "''"),
@@ -177,7 +177,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
             except sqlite3.OperationalError:
                 pass
 
-    # 7. Bills Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS bills (
             bill_id TEXT PRIMARY KEY,
@@ -190,7 +190,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
             FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON UPDATE CASCADE
         );
     """)
-    # Migration: Add visit_id, subtotal, discount, cancellation columns if missing
+
     for col, ctype, default in [
         ("visit_id", "TEXT", "NULL"),
         ("subtotal", "TEXT", "'0.00'"),
@@ -205,7 +205,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
             except sqlite3.OperationalError:
                 pass
 
-    # 8. Bill Items Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS bill_items (
             item_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,7 +216,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         );
     """)
 
-    # 9. Payments Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             payment_id TEXT PRIMARY KEY,
@@ -242,7 +242,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
             except sqlite3.OperationalError:
                 pass
 
-    # 10. Audit Logs Table
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
             log_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -256,7 +256,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         );
     """)
 
-    # Indexes help searches run faster as records increase
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(full_name);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_patients_status ON patients(status);")

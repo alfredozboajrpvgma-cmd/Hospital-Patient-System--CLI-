@@ -37,7 +37,7 @@ def log_audit_event(
         """, (timestamp, user_id, username, action, target_type, target_id, details))
         conn.commit()
     except Exception as exc:
-        # Don't crash the program if logging fails
+
         pass
 
 

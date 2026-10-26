@@ -1,5 +1,5 @@
 """
-Input validation functions and Pydantic models.
+Input validation functions and standard-library models.
 Makes sure dates, phone numbers, vitals, and billing amounts are valid before saving.
 """
 
@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 import re
 from typing import Tuple, Optional, List, Any, Dict
 
-from pydantic import (
+from utils.schema import (
     BaseModel,
     Field,
     field_validator,
@@ -33,9 +33,9 @@ from config import (
 )
 
 
-# ==========================================
-# Simple Validation Functions
-# ==========================================
+
+
+
 
 def validate_non_empty(
     text: str, field_name: str = "Field", min_length: int = 1, max_length: int = 255
@@ -159,6 +159,9 @@ def validate_decimal_amount(
     except InvalidOperation:
         return False, None, f"Invalid {field_name}. Please enter a valid number (e.g., 500.00 or 1250.50)."
 
+    if not amount.is_finite():
+        return False, None, f"{field_name} must be a finite number."
+
     exponent = amount.as_tuple().exponent
     if isinstance(exponent, int) and exponent < -2:
         return False, None, f"{field_name} cannot have more than 2 decimal places."
@@ -188,9 +191,9 @@ def validate_menu_choice(choice_str: str, min_choice: int, max_choice: int) -> T
     return True, val, ""
 
 
-# ==========================================
-# Pydantic Error Formatter
-# ==========================================
+
+
+
 
 def format_pydantic_error(exc: ValidationError) -> str:
     """Turn validation error messages into clean, readable bullet points."""
@@ -198,16 +201,16 @@ def format_pydantic_error(exc: ValidationError) -> str:
     for err in exc.errors():
         field = " -> ".join(str(loc) for loc in err["loc"])
         msg = err["msg"]
-        # Clean up error text
+
         if msg.startswith("Value error, "):
             msg = msg[len("Value error, "):]
         lines.append(f"• {field.title()}: {msg}")
     return "\n".join(lines)
 
 
-# ==========================================
-# Pydantic Validation Models
-# ==========================================
+
+
+
 
 class PatientCreateModel(BaseModel):
     """Validation schema for registering a new patient."""

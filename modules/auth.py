@@ -38,7 +38,7 @@ class UserSession:
         return has_permission(self.role, resource, action)
 
 
-# Global active session
+
 _CURRENT_SESSION: Optional[UserSession] = None
 
 
@@ -66,9 +66,9 @@ def clear_session() -> None:
     _CURRENT_SESSION = None
 
 
-# ==========================================
-# Password Hashing and Verification
-# ==========================================
+
+
+
 
 def hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:
     """Hash a password with salt using PBKDF2-HMAC-SHA256 so passwords are never saved in plain text."""
@@ -80,12 +80,12 @@ def hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:
 
 def verify_password(password: str, stored_hash: str, salt: str) -> bool:
     """Check if the entered password matches the saved hash and salt."""
-    # Check with PBKDF2-HMAC-SHA256
+
     computed_pbkdf2 = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 20000).hex()
     if secrets.compare_digest(computed_pbkdf2, stored_hash):
         return True
 
-    # Fallback check for older accounts hashed with simple SHA-256
+
     hasher = hashlib.sha256()
     hasher.update(salt.encode("utf-8"))
     hasher.update(password.encode("utf-8"))
@@ -93,9 +93,9 @@ def verify_password(password: str, stored_hash: str, salt: str) -> bool:
     return secrets.compare_digest(computed_legacy, stored_hash)
 
 
-# ==========================================
-# Role-Based Permissions
-# ==========================================
+
+
+
 
 ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     "Administrator": {
@@ -151,9 +151,9 @@ def has_permission(role: str, resource: str, action: str = "view") -> bool:
     return action in allowed_actions or "all" in allowed_actions
 
 
-# ==========================================
-# Database Operations
-# ==========================================
+
+
+
 
 def generate_user_id(conn: sqlite3.Connection) -> str:
     """Generate next staff ID like USR-1001, USR-1002."""
@@ -248,9 +248,9 @@ def toggle_user_status(conn: sqlite3.Connection, user_id: str, new_status: str) 
     return cursor.rowcount > 0
 
 
-# ==========================================
-# CLI Submenus and Handlers
-# ==========================================
+
+
+
 
 def handle_login(conn: sqlite3.Connection) -> Optional[UserSession]:
     """Screen for staff to log in with their username and password."""
@@ -294,7 +294,7 @@ def handle_user_management(conn: sqlite3.Connection) -> None:
     from utils.prompts import select_menu, select_option, confirm_prompt
     from utils.display import render_card
     from utils.validators import StaffUserCreateModel, format_pydantic_error
-    from pydantic import ValidationError
+    from utils.schema import ValidationError
 
     session = get_current_session()
     if not session or session.role != "Administrator":
@@ -332,7 +332,7 @@ def handle_user_management(conn: sqlite3.Connection) -> None:
                 print_warning("Cancelled.")
                 continue
 
-            # Check uniqueness
+
             cur = conn.cursor()
             cur.execute("SELECT user_id FROM users WHERE LOWER(username) = LOWER(?)", (username,))
             if cur.fetchone():
@@ -348,7 +348,7 @@ def handle_user_management(conn: sqlite3.Connection) -> None:
                 print_warning("Cancelled.")
                 continue
 
-            # Validate with Pydantic
+
             try:
                 user_model = StaffUserCreateModel(
                     username=username,
