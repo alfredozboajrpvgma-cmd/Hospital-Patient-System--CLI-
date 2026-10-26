@@ -1,6 +1,5 @@
 # Hospital Patient System Beginner Guide
 
-Complete user manual and introduction to the code
 
 This guide is for group members who are still learning Python. It explains how to install the system, use every main feature, understand the files and database, and prepare for a project demonstration. Technical terms are explained before they are used. File names and menu labels match the program so you can find them easily.
 
